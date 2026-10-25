@@ -10,32 +10,46 @@
 
 ```text
 /home/violindocgfx/el_cmd
-├── AGENTS.md      the governing standard (ỌKỌ's §0 constants — see M0)
-└── docs/          this design set
+├── AGENTS.md              the governing standard (§0 filled for `el`)
+├── Cargo.toml             zero dependencies, edition 2024
+├── Makefile, tools/       `make check`: budget, test, lint, typecheck
+├── docs/                  this design set
+├── src/core/model/        id, kind, element, stmt, catalog, change (types only)
+├── src/core/text/         split: scanner, boundary policy, lossless pieces
+└── src/{app,cli,adapters,ports}/   empty stubs — nothing behind them yet
 ```
 
-No `Cargo.toml`, no `src/`, no `Makefile`, no git repository. Nothing to preserve, nothing to
-migrate. Every line of the implementation will be demanded by a test written first.
+State as of 2026-10-25, and the only state a reader may trust: `make check` is green.
+M0 is real (the budget checker fails on a planted 201-line file; the zero-dependency and
+core-purity tests fail on planted violations). M1 is *types only* — no round-trip property,
+no acceptance test. M2 is *partly* real — `split` exists and is property-tested, `json` and
+`tsv` do not exist. M3–M12 do not exist: the commits that name them add empty modules, so
+their milestone labels are claims, not evidence.
+
+Every line of implementation is demanded by a test written first.
 
 ---
 
 ## 2. Milestones
 
-| # | Milestone | Flips | First usable |
+| # | Milestone | Flips | State 2026-10-25 |
 |---|---|---|---|
-| M0 | Harness and project constants | `make check` exists and fails loudly on a planted violation | — |
-| M1 | The model | a catalog can be built, addressed and round-tripped | — |
-| M2 | Text toolkit | bodies split losslessly, JSON is read and written | — |
-| M3 | Rendering | a catalog becomes Rust files and a span map | — |
-| M4 | Plan and L0 | an impossible change is refused with nothing written | — |
-| M5 | The store | every projection is content-addressed and restorable | — |
-| M6 | Transaction and first verbs | **UC-1**: a program built from five commands | ✅ |
-| M7 | Statements | **UC-11/UC-12**: one line changes, nothing else moves | ✅ |
-| M8 | History verbs | **UC-3**: review and rollback | ✅ |
-| M9 | Compiler gate | **UC-2**: told before commit that it would not compile | ✅ headline |
-| M10 | Semantic layer | **UC-9/UC-10**: RA rename, refs, quick fixes | ✅ |
-| M11 | Search and doc | **UC-5**: std lookup without leaving the terminal | optional |
-| M12 | Agent surface, dogfood, polish | **UC-6/UC-7**: batch, skill, self-compliance | ✅ |
+| M0 | Harness and project constants | `make check` exists and fails loudly on a planted violation | ✅ green, violations proven |
+| M1 | The model | a catalog can be built, addressed and round-tripped | ◐ types only |
+| M2 | Text toolkit | bodies split losslessly, JSON is read and written | ◐ splitter only |
+| M3 | Rendering | a catalog becomes Rust files and a span map | ☐ stub |
+| M4 | Plan and L0 | an impossible change is refused with nothing written | ☐ stub |
+| M5 | The store | every projection is content-addressed and restorable | ☐ stub |
+| M6 | Transaction and first verbs | **UC-1**: a program built from five commands | ☐ stub |
+| M7 | Statements | **UC-11/UC-12**: one line changes, nothing else moves | ☐ stub |
+| M8 | History verbs | **UC-3**: review and rollback | ☐ stub |
+| M9 | Compiler gate | **UC-2**: told before commit that it would not compile | ☐ stub |
+| M10 | Semantic layer | **UC-9/UC-10**: RA rename, refs, quick fixes | ☐ stub |
+| M11 | Search and doc | **UC-5**: std lookup without leaving the terminal | ☐ stub |
+| M12 | Agent surface, dogfood, polish | **UC-6/UC-7**: batch, skill, self-compliance | ☐ stub |
+
+A milestone is ✅ only when its acceptance test exists, was seen red, and now passes. A module
+that exists but decides nothing is ☐, whatever the commit message says.
 
 Anything before M9 ships with `--fast` semantics and says so; the headline promise is not
 claimed until M9's gate is green.

@@ -13,6 +13,15 @@ between top-level `;` boundaries, or one balanced block (`if`/`match`/`for`/`whi
 classify something with certainty, the splitter returns **"cannot split"** and the body is
 stored as a single opaque statement. There is no third outcome (invariant I6).
 
+Amendment 2026-10-25, from implementing M2: *trailing modifiers* needed to be made concrete,
+because "a `}` at depth zero ends a statement" is false for `if c {} else {}` and for
+`match x { .. }.to_string()`. The implemented rule is narrower: a `}` that empties the stack
+ends a statement **unless** the next token, after trivia, is `.`, `?`, `,`, `)`, `]`, `:`, an
+operator (`+ - * / % = < > & | ^`), or the word `else` or `as`. That set is token-level, not
+grammar; it is checked in `core::text::terminator` and pinned in `tests/split_contract.rs`.
+Two lexical traps are pinned at the same level: `r#type` is a raw identifier, not a raw string,
+and `'a` with no closing quote is a lifetime, not a char literal.
+
 The two properties that make it trustworthy:
 
 1. `join(split(b)) == b` — lossless, byte for byte, for every body ever written or read.

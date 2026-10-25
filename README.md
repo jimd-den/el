@@ -14,8 +14,9 @@ hello
 $ el undo && el log
 ```
 
-**Design status: draft, no implementation yet.** This repository currently holds the
-specification and the plan, not the code. Nothing here is claimed to work.
+**Design status: draft, first modules implemented.** The model types and the text splitter
+exist and are tested; the verbs, the store, the gate and the history are specified but not
+implemented. `make check` is green. The console transcript above is the target, not a claim.
 
 ---
 
@@ -53,7 +54,7 @@ in `docs/SRD.md` §3.2 and §12.
 
 ## Working on this
 
-Governing standard: `AGENTS.md`. The gate, once there is code:
+Governing standard: `AGENTS.md`. The gate:
 
 ```bash
 make check                          # budget + test + lint + typecheck
