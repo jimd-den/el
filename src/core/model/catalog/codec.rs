@@ -5,7 +5,7 @@
 //
 // Records:
 //   C  next-id
-//   E  id  kind  alias|-  module  visibility  mode  statements
+//   E  id  kind  alias|-  module  visibility  mode  head  statements
 //   S  id  stmt  -      owner  index  parent|-  text
 //
 // The trailing counts on `E` are derived from the statements and are recomputed
@@ -41,6 +41,7 @@ impl Catalog {
                 element.module.clone(),
                 element.visibility.as_str().into(),
                 element.mode.as_str().into(),
+                element.head.clone(),
                 self.body_len(element.id).to_string(),
             ]);
         }
@@ -100,20 +101,33 @@ impl Catalog {
         let module = record.get(4)?;
         let visibility = Visibility::parse(record.get(5)?)?;
         let mode = BodyMode::parse(record.get(6)?)?;
+        let head = record.get(7)?;
 
         let name = match alias.as_str() {
             "-" => None,
             full => Some(full.rsplit('/').next()?.to_string()),
         };
-        let mut element = Element::new(id, kind, module, name.as_deref(), visibility);
+        if self.find(id).is_some() {
+            return None;
+        }
+        let mut element = Element {
+            id,
+            kind,
+            name,
+            head: head.clone(),
+            alias: None,
+            module: module.clone(),
+            parent: None,
+            visibility,
+            mode,
+        };
+        // The alias is derived, so the stored one is a claim to check rather than
+        // a value to trust: recompute it and compare.
+        element.realias();
         let stored = if alias == "-" { None } else { Some(alias) };
         if element.alias.as_ref().map(|a| a.as_str()) != stored.map(String::as_str) {
             return None;
         }
-        if self.find(id).is_some() {
-            return None;
-        }
-        element.mode = mode;
         self.elements.push(element);
         Some(())
     }

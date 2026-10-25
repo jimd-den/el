@@ -22,8 +22,9 @@ mod identity;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     DuplicateAlias { existing: ElId, alias: String },
+    /// The signature did not start with the kind's own keyword, or had no name.
+    BadSignature { signature: String },
     UnknownId(ElId),
-    EmptyName,
 }
 
 #[derive(Debug)]
@@ -131,13 +132,18 @@ impl Catalog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::model::element::NewElement;
+
+    fn new_el<'a>(kind: Kind, module: &'a str, signature: &'a str, visibility: Visibility) -> NewElement<'a> {
+        NewElement { kind, module, signature, visibility }
+    }
     use crate::core::model::element::Visibility;
     use crate::core::model::kind::Kind;
 
     fn catalog_with_tree() -> (Catalog, ElId, ElId, ElId) {
         let mut catalog = Catalog::new();
         let owner = catalog
-            .add_element(Kind::Function, "src/main.rs", "main", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/main.rs", "fn main", Visibility::Private))
             .expect("add");
         let outer = catalog.add_stmt(owner, "if c {").expect("add");
         let inner = catalog.add_child_stmt(outer, "a();").expect("add");

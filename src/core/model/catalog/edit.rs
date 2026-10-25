@@ -10,36 +10,24 @@
 // cheap, and rewinding the counter to reclaim one would be the first step toward
 // reissuing it.
 //
-// It does not validate Rust: an empty name is refused because the alias would be
-// meaningless, but whether `fn apply` is legal is L0's question, one layer out.
+// It does not validate Rust: a signature that does not start with its kind's
+// keyword, or a named kind with no identifier, is refused because the element
+// could not be addressed or rendered — but whether `fn apply` is *legal* is L0's
+// question, one layer out.
 
 use super::identity::holder_of;
 use super::{Catalog, Error};
-use crate::core::model::element::{Element, Visibility};
+use crate::core::model::element::{Element, NewElement};
 use crate::core::model::id::ElId;
-use crate::core::model::kind::Kind;
 use crate::core::model::stmt::Stmt;
 
 impl Catalog {
     /// Add an item; the catalog issues its id and derives its alias.
-    pub fn add_element(
-        &mut self,
-        kind: Kind,
-        module: &str,
-        name: &str,
-        visibility: Visibility,
-    ) -> Result<ElId, Error> {
-        let name = if kind.needs_name() {
-            if name.is_empty() {
-                return Err(Error::EmptyName);
-            }
-            Some(name)
-        } else {
-            None
-        };
-
+    pub fn add_element(&mut self, new: &NewElement<'_>) -> Result<ElId, Error> {
         let id = self.alloc_id();
-        let element = Element::new(id, kind, module, name, visibility);
+        let element = Element::create(id, new).ok_or_else(|| Error::BadSignature {
+            signature: new.signature.to_string(),
+        })?;
         if let Some(alias) = &element.alias
             && let Some(existing) = holder_of(self, alias.as_str(), id)
         {
@@ -80,17 +68,23 @@ impl Catalog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::model::element::{NewElement, Visibility};
+    use crate::core::model::kind::Kind;
+
+    fn new_el<'a>(kind: Kind, module: &'a str, signature: &'a str, visibility: Visibility) -> NewElement<'a> {
+        NewElement { kind, module, signature, visibility }
+    }
 
     #[test]
     fn id_assigned_and_never_reused() {
         let mut catalog = Catalog::new();
         let doomed = catalog
-            .add_element(Kind::Function, "src/a.rs", "gone", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/a.rs", "fn gone", Visibility::Private))
             .expect("add");
         catalog.remove(doomed).expect("remove");
 
         let fresh = catalog
-            .add_element(Kind::Struct, "src/a.rs", "S", Visibility::Private)
+            .add_element(&new_el(Kind::Struct, "src/a.rs", "struct S", Visibility::Private))
             .expect("add");
 
         assert_eq!(doomed, ElId(1));
@@ -101,7 +95,7 @@ mod tests {
     fn removing_a_statement_does_not_reissue_its_id() {
         let mut catalog = Catalog::new();
         let owner = catalog
-            .add_element(Kind::Function, "src/a.rs", "run", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/a.rs", "fn run", Visibility::Private))
             .expect("add");
         let stmt = catalog.add_stmt(owner, "a();").expect("add");
         catalog.remove(stmt).expect("remove");
@@ -115,14 +109,14 @@ mod tests {
     fn alias_is_unique_across_kinds() {
         let mut catalog = Catalog::new();
         let function = catalog
-            .add_element(Kind::Function, "src/a.rs", "thing", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/a.rs", "fn thing", Visibility::Private))
             .expect("add");
         let structure = catalog
-            .add_element(Kind::Struct, "src/a.rs", "thing", Visibility::Private)
+            .add_element(&new_el(Kind::Struct, "src/a.rs", "struct thing", Visibility::Private))
             .expect("different kind, different alias");
 
         let refused =
-            catalog.add_element(Kind::Function, "src/a.rs", "thing", Visibility::Private);
+            catalog.add_element(&new_el(Kind::Function, "src/a.rs", "fn thing", Visibility::Private));
 
         assert_ne!(function, structure);
         assert_eq!(
@@ -139,19 +133,40 @@ mod tests {
         let mut catalog = Catalog::new();
 
         let id = catalog
-            .add_element(Kind::Impl, "src/a.rs", "", Visibility::Private)
+            .add_element(&new_el(Kind::Impl, "src/a.rs", "impl", Visibility::Private))
             .expect("impl has no name");
 
         assert_eq!(catalog.find(id).expect("added").alias, None);
     }
 
     #[test]
-    fn a_named_kind_with_no_name_is_refused() {
+    fn a_signature_with_no_name_is_refused() {
         let mut catalog = Catalog::new();
 
         assert_eq!(
-            catalog.add_element(Kind::Function, "src/a.rs", "", Visibility::Private),
-            Err(Error::EmptyName)
+            catalog.add_element(&new_el(Kind::Function, "src/a.rs", "fn", Visibility::Private)),
+            Err(Error::BadSignature {
+                signature: "fn".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn a_signature_for_the_wrong_kind_is_refused() {
+        let mut catalog = Catalog::new();
+
+        let refused = catalog.add_element(&new_el(
+            Kind::Function,
+            "src/a.rs",
+            "struct Point",
+            Visibility::Private,
+        ));
+
+        assert_eq!(
+            refused,
+            Err(Error::BadSignature {
+                signature: "struct Point".to_string()
+            })
         );
     }
 
@@ -159,7 +174,7 @@ mod tests {
     fn statement_tree_nests() {
         let mut catalog = Catalog::new();
         let owner = catalog
-            .add_element(Kind::Function, "src/a.rs", "run", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/a.rs", "fn run", Visibility::Private))
             .expect("add");
         let outer = catalog.add_stmt(owner, "loop {").expect("add");
         let middle = catalog.add_child_stmt(outer, "if c {").expect("add");

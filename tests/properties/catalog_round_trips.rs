@@ -1,5 +1,5 @@
 use el::core::model::catalog::Catalog;
-use el::core::model::element::{BodyMode, Visibility};
+use el::core::model::element::{BodyMode, NewElement, Visibility};
 use el::core::model::kind::Kind;
 
 // FR-3: the catalog encodes to a deterministic, line-oriented text form;
@@ -9,18 +9,22 @@ use el::core::model::kind::Kind;
 // This is the property the store rests on. If it fails, a history snapshot
 // differs from a rebuilt catalog for no reason, and every future diff is noise.
 
+fn new_el<'a>(kind: Kind, module: &'a str, signature: &'a str, visibility: Visibility) -> NewElement<'a> {
+    NewElement { kind, module, signature, visibility }
+}
+
 /// A catalog that exercises every record: a named function with statements, a
 /// statement nested two deep, a const, an unnamed impl and an opaque body.
 fn sample() -> Catalog {
     let mut catalog = Catalog::new();
     let apply = catalog
-        .add_element(Kind::Function, "src/core/plan.rs", "apply", Visibility::Pub)
+        .add_element(&new_el(Kind::Function, "src/core/plan.rs", "fn apply", Visibility::Pub))
         .expect("add function");
     catalog
-        .add_element(Kind::Const, "src/core/plan.rs", "SCALE", Visibility::Private)
+        .add_element(&new_el(Kind::Const, "src/core/plan.rs", "const SCALE", Visibility::Private))
         .expect("add const");
     let opaque = catalog
-        .add_element(Kind::Function, "src/core/plan.rs", "legacy", Visibility::Crate)
+        .add_element(&new_el(Kind::Function, "src/core/plan.rs", "fn legacy", Visibility::Crate))
         .expect("add opaque");
     if let Some(element) = catalog.find_mut(opaque) {
         element.mode = BodyMode::Opaque;
@@ -61,13 +65,13 @@ fn field_order_does_not_change_the_bytes() {
 fn the_id_counter_survives_a_round_trip() {
     let mut catalog = Catalog::new();
     let doomed = catalog
-        .add_element(Kind::Function, "src/a.rs", "gone", Visibility::Private)
+        .add_element(&new_el(Kind::Function, "src/a.rs", "fn gone", Visibility::Private))
         .expect("add");
     catalog.remove(doomed).expect("remove");
 
     let mut rebuilt = Catalog::decode(&catalog.encode()).expect("decodes");
     let next = rebuilt
-        .add_element(Kind::Function, "src/a.rs", "fresh", Visibility::Private)
+        .add_element(&new_el(Kind::Function, "src/a.rs", "fn fresh", Visibility::Private))
         .expect("add");
 
     assert!(next.0 > doomed.0, "{doomed} would have been reissued");
@@ -91,11 +95,29 @@ fn a_body_mode_survives_the_round_trip() {
 fn a_tab_in_a_statement_survives_the_round_trip() {
     let mut catalog = Catalog::new();
     let owner = catalog
-        .add_element(Kind::Function, "src/a.rs", "run", Visibility::Private)
+        .add_element(&new_el(Kind::Function, "src/a.rs", "fn run", Visibility::Private))
         .expect("add");
     catalog.add_stmt(owner, "let s = \"a\tb\";").expect("add");
 
     let decoded = Catalog::decode(&catalog.encode()).expect("decodes");
 
     assert_eq!(decoded, catalog);
+}
+
+#[test]
+fn a_head_survives_the_round_trip() {
+    let mut catalog = Catalog::new();
+    catalog
+        .add_element(&new_el(
+            Kind::Function,
+            "src/a.rs",
+            "fn first<T>(xs: &[T]) -> Option<&T>",
+            Visibility::Pub,
+        ))
+        .expect("add");
+
+    let decoded = Catalog::decode(&catalog.encode()).expect("decodes");
+
+    let element = decoded.elements.first().expect("element");
+    assert_eq!(element.head, "<T>(xs: &[T]) -> Option<&T>");
 }
