@@ -9,7 +9,7 @@
 ## 1. Current state
 
 ```text
-/home/violindocgfx/el_cmd
+~/el               (this repository root)
 ├── AGENTS.md              the governing standard (§0 filled for `el`)
 ├── Cargo.toml             zero dependencies, edition 2024
 ├── Makefile, tools/       `make check`: budget, test, lint, typecheck
