@@ -36,7 +36,7 @@ Every line of implementation is demanded by a test written first.
 |---|---|---|---|
 | M0 | Harness and project constants | `make check` exists and fails loudly on a planted violation | ✅ green, violations proven |
 | M1 | The model | a catalog can be built, addressed and round-tripped | ✅ |
-| M2 | Text toolkit | bodies split losslessly, JSON is read and written | ◐ splitter + tsv, no json |
+| M2 | Text toolkit | bodies split losslessly, JSON is read and written | ✅ |
 | M3 | Rendering | a catalog becomes Rust files and a span map | ☐ stub |
 | M4 | Plan and L0 | an impossible change is refused with nothing written | ☐ stub |
 | M5 | The store | every projection is content-addressed and restorable | ☐ stub |
@@ -131,6 +131,20 @@ This test is red before `split.rs` exists; the refusal cases are what make it ha
 
 **Done when.** `make check` green; the splitter's refusal list is a checked-in fixture so a
 future "improvement" that starts guessing is caught.
+
+**Status 2026-10-25: ✅ — with one honesty note.** The splitter already existed when this
+milestone was opened, so `split_round_trips.rs` was **green on first run**: it is a pin on
+behaviour that was already there, not a test that drove it. It earns its place by covering what
+the splitter was never checked against — 40 adversarial bodies (raw strings holding `}`, macros
+with unbalanced-looking tokens, labelled loops, lifetimes beside char literals, `*/` inside a
+delimited string) and 9 refusals, each file named for why it cannot be split. If the scanner is
+ever "simplified", this is what fails first.
+
+The new production code here is `text::json`, written test-first and proved by mutation rather
+than by a claim: removing the trailing-text check fails `trailing_text_is_refused` and
+`a_bad_number_is_refused`; decoding `\n` as anything else fails `a_string_round_trips`.
+`lines.rs` is deliberately not implemented — nothing calls it yet, and the string helpers it
+would hold are M3's first need, not M2's.
 
 ---
 

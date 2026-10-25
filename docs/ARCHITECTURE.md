@@ -99,12 +99,17 @@ src/
       spans.rs                 90   line ranges → element ids (FR-17)
       style.rs                 60   indentation, blank-line policy, width
     text/
-      mod.rs                   15
-      scan.rs                 130   string/char/raw-string/comment/delimiter scanner
-      split.rs                150   lexical statement splitter (I6, FR-64, FR-65)
-      json.rs                 170   minimal JSON reader + writer (cargo + RA + our --json)
-      lines.rs                 90   split/indent/trim/join helpers over &str
-      tsv.rs                   80   line-oriented record encode/decode with escaping
+      mod.rs                    6
+      scan.rs                 180   string/char/raw-string/comment/delimiter scanner
+      terminator.rs           140   where a statement may end: `;`, `}`, operator
+                                   continuation (`else`, `as`, `.`)
+      split.rs                110   lexical statement splitter (I6, FR-64, FR-65)
+      json/mod.rs             145   Json tree, canonical writer, accessors
+      json/parse.rs           170   strict reader: containers, dispatch, trailing text
+      json/scalar.rs           90   literals; numbers validated and kept as source text
+      json/string.rs          150   escapes, `\uXXXX`, surrogate pairs
+      tsv.rs                  140   line-oriented record encode/decode with escaping
+      lines.rs                  -   deferred: no call site yet; M3's renderer is the first
     gate/
       mod.rs                   40   tier selection, orchestration through ports
       diagnostics.rs          150   cargo JSON + LSP diagnostics → one Diagnostic type
@@ -160,6 +165,8 @@ tests/
   meta/                       zero_dependencies, core_is_pure, app_is_orchestration,
                               line_budget, preambles, no_telemetry
   fixtures/                   cargo-json/*.jsonl, ra/*.lsp, bodies/*.rs
+                              (bodies/refused/*.rs are the splitter's refusal corpus:
+                              each file is named for why it cannot be split)
 tools/
   check_line_budget.py       ≤ 200 (it counts itself)
   footprint.sh
