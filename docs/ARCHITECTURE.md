@@ -79,7 +79,10 @@ src/
       kind.rs                  70   Kind + per-kind rules (needs body? name? children?)
       element.rs              110   Element, Module, Visibility, BodyMode
       stmt.rs                 100   Stmt, nesting, binding, comment attachment
-      catalog.rs              120   Catalog: elements, modules, deps, policy, next_id
+      catalog/mod.rs          170   Catalog: elements, statements, next_id, queries
+      catalog/edit.rs         175   creation: id issue, alias uniqueness, statements
+      catalog/identity.rs     160   removal, rename, move — the id-preserving edits
+      catalog/codec.rs        165   the deterministic text form (ADR-0015)
       change.rs                85   Change enum: the complete mutation vocabulary
     plan/
       mod.rs                   35   plan(Change, Catalog) → Projection | Violations
@@ -152,6 +155,8 @@ tests/
   acceptance/                 one file per use case (SRD §6)
   integration/                real cargo / real RA / real fs, temp dirs
   properties/                 render determinism, split round-trip, catalog round-trip
+                              (a subdirectory needs a main.rs to be a cargo target:
+                              tests/properties/main.rs declares its modules)
   meta/                       zero_dependencies, core_is_pure, app_is_orchestration,
                               line_budget, preambles, no_telemetry
   fixtures/                   cargo-json/*.jsonl, ra/*.lsp, bodies/*.rs
