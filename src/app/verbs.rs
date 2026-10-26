@@ -42,6 +42,7 @@ pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
             changes: vec![change],
             dry_run: globals.dry_run,
             strict: globals.strict,
+            fast: globals.fast,
         },
     )
 }
@@ -66,6 +67,7 @@ pub fn edit(env: &Env<'_>, globals: &Globals, edit: Edit, stdin: &str) -> Report
             changes: vec![change],
             dry_run: globals.dry_run,
             strict: globals.strict,
+            fast: globals.fast,
         },
     )
 }
@@ -86,6 +88,7 @@ pub fn remove(env: &Env<'_>, globals: &Globals, ids: &[String]) -> Report {
             changes,
             dry_run: globals.dry_run,
             strict: globals.strict,
+            fast: globals.fast,
         },
     )
 }
@@ -106,6 +109,7 @@ pub fn move_(env: &Env<'_>, globals: &Globals, mv: Mv) -> Report {
             changes: vec![change],
             dry_run: globals.dry_run,
             strict: globals.strict,
+            fast: globals.fast,
         },
     )
 }

@@ -24,6 +24,7 @@ fn sample() -> Report {
             existing: 5,
             verdict: "ok".to_string(),
             ms: 812,
+            diagnostics: vec![],
         }),
         lines: vec!["el-0007".to_string()],
         notes: vec!["rust-analyzer 2026-10-13 used for rename".to_string()],

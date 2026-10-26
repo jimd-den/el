@@ -14,7 +14,7 @@ fn undo_restores_every_owned_byte_and_the_deleted_file() {
     let module = String::from_utf8_lossy(&module.stdout).trim().to_string();
     let added = el_stdin(
         &built.hello,
-        &["add", "fn", "tmp", "--in", "src/tmp.rs", "--sig", "fn tmp()", "--body", "-"],
+        &["add", "fn", "tmp", "--in", "src/tmp.rs", "--sig", "fn tmp()", "--body", "-", "--fast"],
         "go();\n",
     );
     ok(&added, "add fn");

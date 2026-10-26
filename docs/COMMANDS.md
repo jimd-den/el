@@ -69,7 +69,7 @@ el init [--force]
 ```
 
 `new` writes a crate with `src/main.rs` (or `src/lib.rs`), an empty manifest, `el.policy`
-with the `AGENTS.md` defaults (except `gate = model` until M9 adds L1), `.gitignore`, and
+with the `AGENTS.md` defaults, `.gitignore`, and
 `.el/` seeded with entry seq 1 (`init`) followed by the root module's `add` entry — the two
 entries are one command's history, not two commands. `init` adopts an existing directory:
 everything under `src/` is imported as opaque modules (`ADR-0009`), so nothing is lost and
@@ -157,9 +157,12 @@ el run   [-- <program args>] [--json]
 el fix   <id> (--list | --apply <code>:<n>) [--json]
 ```
 
-`check` runs the gate against the current tree with no change and reports the delta against
-the last committed entry. `test`, `build` and `run` run the gate **first** and refuse to
-proceed if the current tree has new diagnostics relative to head (`--fast` skips).
+`check`, `test`, `build` and `fix` are specified but unbuilt: the CLI has no
+such verbs yet. `run` does **not** gate first — after drift refusal, disk
+equals the head projection, so a gate would judge an empty delta; ambient
+files outside the projection (such as `build.rs`) are surfaced by `cargo run`
+itself. When `check` lands, its job is diagnostics reporting plus baseline
+writing, not refusal (ADR-0026).
 
 `fix` lists or applies `rust-analyzer` code actions for diagnostics in that element
 (`FR-54`). Applying is a normal transaction: snapshot, edit, gate, commit or restore.
@@ -240,18 +243,19 @@ Failure:
       "code": "E0308", "level": "error",
       "el": "el-0102", "owner": "el-0007",
       "path": "src/core/plan.rs", "line": 41, "col": 9,
-      "message": "mismatched types: expected u32, found &u32"
+      "message": "mismatched types: expected u32, found &u32", "exact": true
     }]
   }
 }
 ```
 
 Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `seq`, `changed[].op`,
-`changed[].id`, `gate.*`, `diagnostics[].{code,el,path,line,message}`.
+`changed[].id`, `gate.*`, `diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
 
 Error codes are namespaced and stable:
-`usage.unknown_flag`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
-`model.cross_body_move`, `gate.rejected`, `env.missing_tool`, `env.drift`, `env.offline_miss`,
+`usage.unknown_flag`, `usage.unsupported`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
+`model.cross_body_move`, `gate.rejected`, `env.missing_tool`, `env.tool_failed`, `env.timeout`,
+`env.bad_policy`, `env.drift`, `env.offline_miss`,
 `conflict.locked`, `notfound.element`, `ra.timeout`, `internal.panic`.
 
 ---

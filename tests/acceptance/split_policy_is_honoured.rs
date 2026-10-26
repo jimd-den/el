@@ -14,6 +14,13 @@ fn add(hello: &std::path::Path, body: &str) -> std::process::Output {
     el_stdin(hello, &["add", "fn", "opaque", "--in", "src/greet.rs", "--sig", "fn opaque()", "--body", "-"], body)
 }
 
+/// The auto-fallback case measures the split policy, not compilation: its
+/// body is an unterminated string, which the compiler gate would refuse
+/// before the policy question is ever reached.
+fn add_fast(hello: &std::path::Path, body: &str) -> std::process::Output {
+    el_stdin(hello, &["add", "fn", "opaque", "--in", "src/greet.rs", "--sig", "fn opaque()", "--body", "-", "--fast"], body)
+}
+
 #[test]
 fn never_stores_the_body_opaque_and_shows_the_mode() {
     let built = program::build("split-never");
@@ -36,7 +43,7 @@ fn always_refuses_what_auto_keeps_opaque() {
     assert_eq!(refused.status.code(), Some(2), "{}", String::from_utf8_lossy(&refused.stdout));
 
     policy(&built.hello, "auto");
-    let accepted = add(&built.hello, "log(\"open");
+    let accepted = add_fast(&built.hello, "log(\"open");
     ok(&accepted, "auto fallback");
     let id = String::from_utf8_lossy(&accepted.stdout).trim().to_string();
     let show = el(&built.hello, &["show", &id, "--json"]);

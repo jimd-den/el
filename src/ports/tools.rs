@@ -21,6 +21,9 @@ pub struct Finished {
     pub code: i32,
     pub stdout: String,
     pub stderr: String,
+    /// True when the run ended by timeout rather than by exiting: the child
+    /// was killed, so the code above is not a verdict.
+    pub timed_out: bool,
 }
 
 impl Finished {
@@ -62,4 +65,17 @@ impl fmt::Display for Error {
 /// A program to run, its arguments, and what to feed it.
 pub trait Tools {
     fn run(&self, argv: &[String], stdin: Option<&str>) -> Result<Finished, Error>;
+
+    /// Like `run`, but the child is killed after `timeout_secs` and the
+    /// result reports `timed_out` instead of an exit code. The default
+    /// implementation has no timeout to enforce — it is the test double's
+    /// shape — so it delegates to `run`; the real runner implements it.
+    fn run_timed(
+        &self,
+        argv: &[String],
+        stdin: Option<&str>,
+        _timeout_secs: u64,
+    ) -> Result<Finished, Error> {
+        self.run(argv, stdin)
+    }
 }

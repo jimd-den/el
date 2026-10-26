@@ -7,3 +7,4 @@ mod fs_write_is_atomic;
 mod helpers;
 mod rendered_crates_compile;
 mod store_round_trip;
+mod gate_latency;

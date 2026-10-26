@@ -7,25 +7,25 @@
 // the changes; `out_*` reads the report; this module decides only what is written
 // and in what order.
 
-use super::change;
 use super::error::{self, Error};
 use super::load;
 use super::projection;
 use super::report::Report;
 use crate::core::history::entry::{Entry, Op};
-use crate::core::history::object::{self, Digest};
-use crate::core::history::tree::Tree;
-use crate::core::model::catalog::Catalog;
-use crate::core::render::{render, Projection};
+use crate::core::history::object;
 use std::time::Instant;
 
 mod gate;
 mod outcome;
+mod prepare;
 mod stage;
 
 #[cfg(test)]
 #[path = "transaction/support.rs"]
 mod support;
+#[cfg(test)]
+#[path = "transaction_gate_tests.rs"]
+mod transaction_gate_tests;
 #[cfg(test)]
 #[path = "transaction_tests.rs"]
 mod transaction_tests;
@@ -41,6 +41,7 @@ pub struct Mutation {
     pub changes: Vec<crate::core::model::change::Change>,
     pub dry_run: bool,
     pub strict: bool,
+    pub fast: bool,
 }
 
 /// Roll back an interrupted transaction before the command reads anything.
@@ -54,20 +55,9 @@ pub fn recover(env: &super::Env<'_>) -> Result<Vec<String>, Error> {
     Ok(vec!["el: restored head's tree after an interrupted transaction".to_string()])
 }
 
-struct Prepared {
-    seq: u64,
-    old_tree: Tree,
-    old_digest: Digest,
-    new_tree: Tree,
-    new_digest: Digest,
-    projection: Projection,
-    catalog: Catalog,
-    changed: Vec<super::report::Changed>,
-}
-
 pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
     let mut notes = Vec::new();
-    let prepared = match prepare(env, &mutation, &mut notes) {
+    let prepared = match prepare::prepare(env, &mutation, &mut notes) {
         Ok(prepared) => prepared,
         Err(error) => return Report::fail(mutation.cmd, error),
     };
@@ -91,94 +81,87 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
         Err(error) => return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error),
     };
 
-    let passed = match gate::gate(env, mutation.strict) {
-        Ok(passed) => passed,
+    let evaluation = match gate::evaluate(gate::Input {
+        env,
+        tier: prepared.tier,
+        catalog: &prepared.catalog,
+        old_catalog: &prepared.old_catalog,
+        projection: &prepared.projection,
+        old_tree: &prepared.old_tree,
+        new_tree: &prepared.new_tree,
+        old_digest: prepared.old_digest,
+    }) {
+        Ok(evaluation) => evaluation,
         Err(error) => return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error),
     };
     let ms = started.elapsed().as_millis() as u64;
+    let judged = outcome::GateVerdict {
+        tier: prepared.tier,
+        delta: &evaluation.delta,
+        catalog: &prepared.catalog,
+    };
 
-    if !passed {
-        return outcome::reject(env, &prepared.old_tree, &mut entry, mutation.cmd, ms);
-    }
     if mutation.dry_run {
-        return outcome::preview(env, &prepared.old_tree, &mut entry, mutation.cmd, ms);
+        return outcome::preview(env, &prepared.old_tree, &mut entry, mutation.cmd, ms, judged);
+    }
+    if !gate::may_commit(prepared.tier, &evaluation.delta) {
+        return outcome::reject(env, &prepared.old_tree, &mut entry, mutation.cmd, ms, judged);
     }
 
-    entry.gate = "model".to_string();
+    entry.gate = prepared.tier.as_str().to_string();
+    if prepared.tier != crate::core::gate::Tier::Model
+        && let Err(error) = gate::write_baseline(
+            env,
+            prepared.new_digest,
+            prepared.tier,
+            &evaluation.current,
+        )
+    {
+        return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error);
+    }
     if let Err(error) = stage::commit(env, prepared.seq, &prepared.catalog, &entry) {
         return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error);
     }
 
     notes.push(written.message());
+    let new_warnings = evaluation
+        .delta
+        .new
+        .iter()
+        .filter(|diag| diag.level == crate::core::gate::Level::Warning)
+        .count();
+    if new_warnings > 0 {
+        notes.push(format!(
+            "el: {} new warning{} ({} fixed, {} pre-existing)",
+            new_warnings,
+            if new_warnings == 1 { "" } else { "s" },
+            evaluation.delta.fixed.len(),
+            evaluation.delta.existing.len()
+        ));
+        notes.extend(outcome::diagnostic_lines(
+            &prepared.catalog,
+            &evaluation.delta.new,
+        ));
+    }
 
     let mut report = Report::new(mutation.cmd);
     report.seq = Some(prepared.seq);
     report.changed = prepared.changed;
     report.lines = report.changed.iter().map(|change| change.id.clone()).collect();
     report.gate = Some(super::report::Gate {
-        tier: "model".to_string(),
-        new: 0,
-        fixed: 0,
-        existing: 0,
+        tier: prepared.tier.as_str().to_string(),
+        new: evaluation.delta.new.len(),
+        fixed: evaluation.delta.fixed.len(),
+        existing: evaluation.delta.existing.len(),
         verdict: "ok".to_string(),
         ms,
+        diagnostics: vec![],
     });
     report.notes = notes;
     report
 }
 
-fn prepare(env: &super::Env<'_>, mutation: &Mutation, notes: &mut Vec<String>) -> Result<Prepared, error::Error> {
-    load::ensure_crate(env)?;
-    let catalog = load::catalog(env)?;
-    let policy = load::policy(env)?;
-    let (head, old_tree) = load::head_tree(env)?;
-    // `init` commits an empty tree; the first `new` transaction is what writes the
-    // projection, so there is nothing on disk to compare yet.
-    if !old_tree.is_empty() {
-        notes.extend(projection::check_drift(env, &catalog, &env.crate_name)?);
-    }
-
-    let mut working = catalog.clone();
-    let mut projection = render(&working, &env.crate_name);
-    let mut changed = Vec::new();
-    for change in &mutation.changes {
-        let before = working.clone();
-        let outcome = crate::core::plan::plan(
-            &working,
-            &crate::core::plan::Request {
-                change,
-                policy: &policy,
-                crate_name: &env.crate_name,
-            },
-        )
-        .map_err(outcome::violation_error)?;
-        changed.extend(change::describe(change, &before, &outcome.catalog));
-        working = outcome.catalog;
-        projection = outcome.projection;
-    }
-
-    let seq = if mutation.dry_run {
-        stage::next_free(env, head)?
-    } else {
-        env.journal.truncate_future(head).map_err(error::store)?;
-        head + 1
-    };
-    let old_digest = env.journal.put_tree(&old_tree).map_err(error::store)?;
-    let new_tree = projection::tree_of(env, &projection)?;
-    let new_digest = env.journal.put_tree(&new_tree).map_err(error::store)?;
-    Ok(Prepared {
-        seq,
-        old_tree,
-        old_digest,
-        new_tree,
-        new_digest,
-        projection,
-        catalog: working,
-        changed,
-    })
-}
-
-fn entry(env: &super::Env<'_>, mutation: &Mutation, prepared: &Prepared) -> Entry {
+fn entry(env: &super::Env<'_>, mutation: &Mutation, prepared: &prepare::Prepared) -> Entry {
     Entry {
         seq: prepared.seq,
         ts: env.clock.now_unix(),
