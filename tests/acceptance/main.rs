@@ -1,4 +1,6 @@
 mod diagnostics_map_to_elements;
 mod manifest_has_no_deps_by_default;
+mod model_violation_writes_nothing;
 mod mod_tree_is_generated;
+mod policy_ceiling_blocks_growth;
 mod render_matches_golden;
