@@ -92,19 +92,30 @@ src/
       refs.rs                 120   alias resolution, reference index, rename/rewrite
       policy.rs                90   el.policy parsing and evaluation
     render/
-      mod.rs                   40   Projection, render entry point, ordering
-      rust.rs                 160   item and module rendering
-      body.rs                 110   body rendering from statements; opaque passthrough
-      manifest.rs              70   Cargo.toml from catalog deps
-      spans.rs                 90   line ranges → element ids (FR-17)
-      style.rs                 60   indentation, blank-line policy, width
+      mod.rs                   86   Projection, `render`, ordering contract (FR-13)
+      rust.rs                 137   one module's file: marker, preamble, mod lines, items
+      rust_tests.rs            60
+      body.rs                  92   statements back to text; opaque passthrough
+      body_tests.rs           150
+      tree.rs                 165   the module tree and its `mod` lines (FR-15)
+      tree_paths.rs            74   path ↔ module name, and which file a child lives in
+      tree_visibility.rs       42   widest visibility below a module (ADR-0016)
+      tree_tests.rs           102
+      spans.rs                124   line ranges → element ids, innermost wins (FR-17)
+      style.rs                141   marker, indentation, and the line-counting `Out`
+      manifest.rs              44   Cargo.toml, no dependency table unless declared (FR-16)
     text/
-      mod.rs                   15
-      scan.rs                 130   string/char/raw-string/comment/delimiter scanner
-      split.rs                150   lexical statement splitter (I6, FR-64, FR-65)
-      json.rs                 170   minimal JSON reader + writer (cargo + RA + our --json)
-      lines.rs                 90   split/indent/trim/join helpers over &str
-      tsv.rs                   80   line-oriented record encode/decode with escaping
+      mod.rs                    6
+      scan.rs                 180   string/char/raw-string/comment/delimiter scanner
+      terminator.rs           140   where a statement may end: `;`, `}`, operator
+                                   continuation (`else`, `as`, `.`)
+      split.rs                110   lexical statement splitter (I6, FR-64, FR-65)
+      json/mod.rs             145   Json tree, canonical writer, accessors
+      json/parse.rs           170   strict reader: containers, dispatch, trailing text
+      json/scalar.rs           90   literals; numbers validated and kept as source text
+      json/string.rs          150   escapes, `\uXXXX`, surrogate pairs
+      tsv.rs                  140   line-oriented record encode/decode with escaping
+      lines.rs                  -   deferred: no call site yet; M3's renderer is the first
     gate/
       mod.rs                   40   tier selection, orchestration through ports
       diagnostics.rs          150   cargo JSON + LSP diagnostics → one Diagnostic type
@@ -160,6 +171,8 @@ tests/
   meta/                       zero_dependencies, core_is_pure, app_is_orchestration,
                               line_budget, preambles, no_telemetry
   fixtures/                   cargo-json/*.jsonl, ra/*.lsp, bodies/*.rs
+                              (bodies/refused/*.rs are the splitter's refusal corpus:
+                              each file is named for why it cannot be split)
 tools/
   check_line_budget.py       ≤ 200 (it counts itself)
   footprint.sh
@@ -178,6 +191,7 @@ docs/
 |---|---|---|
 | `core` vs `adapters` | The compiler-facing rules change rarely; the tools change constantly | A rule buried in an adapter cannot be tested without that tool — this is the seam that makes the fast suite possible |
 | `ports/tools.rs` | Every external tool is the same shape: argv in, exit/stdout/stderr out | One fake drives cargo, RA and curl in tests (`GATE.md` §9) |
+| `render/tree.rs` owns `mod` lines, not `rust.rs` | A `mod` line is a fact about the module tree, and the tree is derived from paths, not from the file being written | If they merge, the visibility rule (ADR-0016) has nowhere to live |
 | `text/split.rs` separate from `render/body.rs` | The splitter is a lexical utility with its own invariant (I6); the renderer consumes its output | If they merge, the lossless property test has nowhere to live |
 | `gate/delta.rs` separate from `gate/diagnostics.rs` | Parsing an external format changes when `cargo` changes; fingerprinting is ours | A cargo format change should break one file's fixtures, not the verdict logic |
 | `history` as four files | Encode/decode, hashing, trees and entries are four different reasons to change | One `store.rs` would cross 200 lines and mix concerns |

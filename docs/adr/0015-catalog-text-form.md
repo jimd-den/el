@@ -36,3 +36,21 @@ M1). `el doctor --rebuild` must tolerate a missing `C` only by rebuilding, never
 
 Revisit if: the format needs a human-edited mode, at which point reading becomes `doctor`'s job
 and the writer stays strict.
+
+## Amendment — 2026-10-25, when rendering needed a parameter list
+
+The `E` record gained one field, the element's **head**: the text after the identifier and
+before the body, exactly as written (`(p: &Plan) -> Verdict`, `: usize = 10`, empty for a
+struct).
+
+Why the record had to change: M3 renders Rust, and `Element` could not express a parameter
+list at all — `COMMANDS.md` offers `--sig 'fn run(p: &Plan) -> Verdict'` while the model had
+nowhere to put it. Without it, "rendered files compile" would be a claim about `fn foo() {}`
+and nothing else.
+
+Why text and not a typed signature: a typed signature is a Rust parser wearing a smaller hat
+(ADR-0008, ADR-0013). The model keeps the characters; `signature::split` finds the identifier
+so the alias and a rename still work, and the compiler judges the rest behind the gate.
+
+The identifier is stored separately in the alias, which is why a rename rewrites nothing: the
+head never contained the name to begin with.

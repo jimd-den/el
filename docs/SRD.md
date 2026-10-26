@@ -425,10 +425,10 @@ alternative exists).
 | Id | Requirement | Verified by |
 |---|---|---|
 | FR-13 | `render(catalog)` is pure and deterministic: same catalog → same bytes, on any machine, in any order of insertion. | `tests/properties/render_is_deterministic.rs` |
-| FR-14 | Rendered files are valid Rust that `cargo check` accepts when the catalog is valid. | `acceptance/every_rendered_module_compiles.rs` |
-| FR-15 | `mod` declarations are generated from the module tree; users never write them. | `acceptance/mod_tree_is_generated.rs` |
+| FR-14 | Rendered files are valid Rust that `cargo check` accepts when the catalog is valid. | `integration/rendered_crates_compile.rs` (five catalogs, real `cargo check`, not `#[ignore]`d) |
+| FR-15 | `mod` declarations are generated from the module tree; users never write them. A generated `mod` line is as visible as the widest item beneath it, so it never hides what the catalog exposed (ADR-0016). | `acceptance/mod_tree_is_generated.rs` |
 | FR-16 | `Cargo.toml` is generated and contains no dependency table unless the catalog declares one. | `acceptance/manifest_has_no_deps_by_default.rs` |
-| FR-17 | The tool emits a span map (path → element id per line range) with each projection, used by the diagnostic delta. | `core/render/layout.rs`; `acceptance/diagnostics_map_to_elements.rs` |
+| FR-17 | The tool emits a span map (path → element id per line range) with each projection, used by the diagnostic delta. | `core/render/spans.rs`; `acceptance/diagnostics_map_to_elements.rs` |
 
 ### 8.4 Verification (the gate)
 

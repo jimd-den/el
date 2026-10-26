@@ -2,64 +2,33 @@
 // kind of thing it is, where it lives, what it is called, and how its body is
 // stored.
 //
+// The head is text, not a typed signature (`signature::split` says where it
+// starts). That is ADR-0008's stance and the reason rendering can reproduce
+// `fn apply(p: &Plan) -> Verdict` without `el` ever parsing Rust: the model
+// remembers the characters, the compiler judges them.
+//
 // The alias is never passed in; it is recomputed whenever the name or module
 // changes, so a rename cannot leave a stale alias behind (FR-2). The body itself
-// is not here: bodies live in statements (`stmt`), and `mode` says whether that
-// is one opaque blob or a list.
+// is not here: bodies are statements (`stmt`), and `mode` says whether the split
+// is trusted or the body is one opaque blob.
 
 use super::id::{Alias, ElId};
 use super::kind::Kind;
+use super::signature;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Visibility {
-    Pub,
-    Crate,
-    Private,
-}
+// Defined in `modifier` because they describe presentation, not identity; the
+// path stays `element::…` because that is what an element is made of.
+pub use super::modifier::{BodyMode, Visibility};
 
-impl Visibility {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Visibility::Pub => "pub",
-            Visibility::Crate => "crate",
-            Visibility::Private => "priv",
-        }
-    }
-
-    pub fn parse(text: &str) -> Option<Self> {
-        match text {
-            "pub" => Some(Visibility::Pub),
-            "crate" => Some(Visibility::Crate),
-            "priv" => Some(Visibility::Private),
-            _ => None,
-        }
-    }
-}
-
-/// How a body is stored: split into statements, or kept as one opaque blob
-/// (FR-63). Downgrading to opaque is always allowed; upgrading needs a clean
-/// split.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BodyMode {
-    Split,
-    Opaque,
-}
-
-impl BodyMode {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            BodyMode::Split => "split",
-            BodyMode::Opaque => "opaque",
-        }
-    }
-
-    pub fn parse(text: &str) -> Option<Self> {
-        match text {
-            "split" => Some(BodyMode::Split),
-            "opaque" => Some(BodyMode::Opaque),
-            _ => None,
-        }
-    }
+/// What a caller knows when an element is created. `signature` is the head
+/// exactly as written on the command line, keyword first: `fn apply(p: &Plan)`,
+/// `struct Point`, `impl Display for Point`.
+#[derive(Debug, Clone, Copy)]
+pub struct NewElement<'a> {
+    pub kind: Kind,
+    pub module: &'a str,
+    pub signature: &'a str,
+    pub visibility: Visibility,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,6 +36,9 @@ pub struct Element {
     pub id: ElId,
     pub kind: Kind,
     pub name: Option<String>,
+    /// Text after the identifier, up to but not including the body: `(x: u8)`
+    /// for a function, `: usize = 10` for a const, empty for a struct.
+    pub head: String,
     pub alias: Option<Alias>,
     pub module: String,
     pub parent: Option<ElId>,
@@ -76,28 +48,29 @@ pub struct Element {
 
 impl Element {
     /// Build an element for an id the catalog has already issued.
-    pub fn new(
-        id: ElId,
-        kind: Kind,
-        module: &str,
-        name: Option<&str>,
-        visibility: Visibility,
-    ) -> Self {
+    ///
+    /// `None` when the signature does not begin with the kind's keyword, or a
+    /// named kind has no identifier after it — both are L0's to report (FR-5);
+    /// this only refuses to invent one.
+    pub fn create(id: ElId, new: &NewElement<'_>) -> Option<Self> {
+        let (name, head) = signature::split(new.kind, new.signature)?;
         let mut element = Self {
             id,
-            kind,
+            kind: new.kind,
             name: name.map(str::to_string),
+            head: head.to_string(),
             alias: None,
-            module: module.to_string(),
+            module: new.module.to_string(),
             parent: None,
-            visibility,
+            visibility: new.visibility,
             mode: BodyMode::Split,
         };
         element.realias();
-        element
+        Some(element)
     }
 
-    /// Changing the name keeps the id and changes the alias (FR-1).
+    /// Changing the name keeps the id and changes the alias (FR-1); the head is
+    /// untouched, which is why a rename cannot mangle a parameter list.
     pub fn rename(&mut self, name: &str) {
         self.name = Some(name.to_string());
         self.realias();
@@ -109,7 +82,9 @@ impl Element {
         self.realias();
     }
 
-    fn realias(&mut self) {
+    /// Recompute the alias from the current name, kind and module. Called after
+    /// decode, which assigns fields directly rather than going through `create`.
+    pub(crate) fn realias(&mut self) {
         self.alias = match (&self.name, self.kind.needs_name()) {
             (Some(name), true) => Some(Alias::derive(&self.module, self.kind, name)),
             _ => None,
@@ -121,24 +96,25 @@ impl Element {
 mod tests {
     use super::*;
 
-    fn element() -> Element {
-        Element::new(
-            ElId(7),
-            Kind::Function,
-            "src/core/plan.rs",
-            Some("apply"),
-            Visibility::Pub,
-        )
+    const APPLY: NewElement<'_> = NewElement {
+        kind: Kind::Function,
+        module: "src/core/plan.rs",
+        signature: "fn apply(p: &Plan) -> Verdict",
+        visibility: Visibility::Pub,
+    };
+
+    fn element(new: &NewElement<'_>) -> Element {
+        Element::create(ElId(7), new).expect("valid signature")
     }
 
     #[test]
     fn an_element_derives_its_alias() {
-        assert_eq!(element().alias.unwrap().as_str(), "core::plan::fn/apply");
+        assert_eq!(element(&APPLY).alias.unwrap().as_str(), "core::plan::fn/apply");
     }
 
     #[test]
     fn a_rename_keeps_the_id_and_moves_the_alias() {
-        let mut element = element();
+        let mut element = element(&APPLY);
 
         element.rename("dispatch");
 
@@ -147,8 +123,17 @@ mod tests {
     }
 
     #[test]
+    fn a_rename_keeps_the_head() {
+        let mut element = element(&APPLY);
+
+        element.rename("dispatch");
+
+        assert_eq!(element.head, "(p: &Plan) -> Verdict");
+    }
+
+    #[test]
     fn a_move_keeps_the_id_and_moves_the_alias() {
-        let mut element = element();
+        let mut element = element(&APPLY);
 
         element.move_to("src/core/gate.rs");
 
@@ -157,19 +142,13 @@ mod tests {
     }
 
     #[test]
-    fn a_kind_without_a_name_has_no_alias() {
-        let stmt = Element::new(ElId(2), Kind::Stmt, "src/main.rs", None, Visibility::Private);
+    fn a_mismatched_signature_creates_nothing() {
+        let wrong = NewElement {
+            signature: "struct Point",
+            ..APPLY
+        };
 
-        assert_eq!(stmt.alias, None);
+        assert_eq!(Element::create(ElId(1), &wrong), None);
     }
 
-    #[test]
-    fn visibility_and_mode_round_trip() {
-        for visibility in [Visibility::Pub, Visibility::Crate, Visibility::Private] {
-            assert_eq!(Visibility::parse(visibility.as_str()), Some(visibility));
-        }
-        for mode in [BodyMode::Split, BodyMode::Opaque] {
-            assert_eq!(BodyMode::parse(mode.as_str()), Some(mode));
-        }
-    }
 }

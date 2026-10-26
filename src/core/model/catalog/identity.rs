@@ -80,16 +80,21 @@ pub(super) fn holder_of(catalog: &Catalog, alias: &str, ignoring: ElId) -> Optio
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::model::element::NewElement;
+
+    fn new_el<'a>(kind: Kind, module: &'a str, signature: &'a str, visibility: Visibility) -> NewElement<'a> {
+        NewElement { kind, module, signature, visibility }
+    }
     use crate::core::model::element::Visibility;
     use crate::core::model::kind::Kind;
 
     fn two_elements() -> Catalog {
         let mut catalog = Catalog::new();
         catalog
-            .add_element(Kind::Function, "src/a.rs", "run", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/a.rs", "fn run", Visibility::Private))
             .expect("add");
         catalog
-            .add_element(Kind::Const, "src/a.rs", "LIMIT", Visibility::Private)
+            .add_element(&new_el(Kind::Const, "src/a.rs", "const LIMIT", Visibility::Private))
             .expect("add");
         catalog
     }
@@ -110,10 +115,10 @@ mod tests {
     fn a_rename_into_a_taken_alias_is_refused() {
         let mut catalog = Catalog::new();
         let first = catalog
-            .add_element(Kind::Function, "src/a.rs", "one", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/a.rs", "fn one", Visibility::Private))
             .expect("add");
         catalog
-            .add_element(Kind::Function, "src/a.rs", "two", Visibility::Private)
+            .add_element(&new_el(Kind::Function, "src/a.rs", "fn two", Visibility::Private))
             .expect("add");
 
         let refused = catalog.rename(ElId(2), "one");

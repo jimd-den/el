@@ -1,0 +1,4 @@
+mod diagnostics_map_to_elements;
+mod manifest_has_no_deps_by_default;
+mod mod_tree_is_generated;
+mod render_matches_golden;

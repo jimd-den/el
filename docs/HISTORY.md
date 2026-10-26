@@ -111,7 +111,7 @@ The derived, human-greppable current model. TSV, one record per line, sorted by 
 
 ```text
 C	103
-E	el-0007	fn	core::plan::fn/apply	src/core/plan.rs	pub	split	9
+E	el-0007	fn	core::plan::fn/apply	src/core/plan.rs	pub	split	(p: &Plan) -> Verdict	9
 S	el-0102	stmt	-	el-0007	2	-	let change = self.clamp();
 M	src/core/plan.rs	preamble	12
 D	serde@1.0	allowed	"why: json export"
@@ -120,8 +120,12 @@ P	ceiling	200
 
 `C` counter (next id to issue), `E` element, `S` statement, `M` module, `D` dependency,
 `P` policy. Fields are tab-separated and escaped (`\\`, `\t`, `\n`, `\r`), so no field can
-contain a tab or a newline. The trailing number on `E` is its statement count, derived on
-encode and ignored on decode: a cache may not outrank the records it counts. The `C` record
+contain a tab or a newline. The field before the trailing number on `E` is the element's head: the text
+after its identifier, exactly as written (`(p: &Plan) -> Verdict`, `: usize = 10`,
+empty for a struct). `el` never parses it — the compiler is the arbiter
+(ADR-0008) — and a rename cannot touch it, because it is stored separately from
+the name. The trailing number on `E` is its statement count, derived on encode
+and ignored on decode: a cache may not outrank the records it counts. The `C` record
 exists because a counter derived from `max(id)` would reissue the id of a deleted element
 (ADR-0015); a counter not greater than every id is treated as corruption. It is a **cache**:
 `doctor --rebuild` regenerates it from the journal and the store, and a test asserts the
