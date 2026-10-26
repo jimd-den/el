@@ -55,6 +55,10 @@ fn main() {
     let clock = SystemClock;
     let tools = ProcTools;
     let actor = std::env::var("EL_ACTOR").unwrap_or_else(|_| "human".to_string());
+    let cargo_timeout = std::env::var("EL_CARGO_TIMEOUT")
+        .ok()
+        .and_then(|text| text.parse::<u64>().ok())
+        .unwrap_or(120);
     let env = Env {
         fs: &local,
         journal: &store,
@@ -63,6 +67,7 @@ fn main() {
         actor,
         crate_name,
         root,
+        cargo_timeout,
     };
 
     let _lock = if needs_lock(&parsed.command) {

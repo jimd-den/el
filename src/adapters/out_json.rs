@@ -10,7 +10,7 @@
 // of strings and the human view owns the sentences. A field that only a human wants
 // has no place in a machine contract.
 
-use crate::app::report::{Changed, Gate, Report, ENVELOPE};
+use crate::app::report::{Changed, Gate, GateDiagnostic, Report, ENVELOPE};
 use crate::core::text::json::{self, Json};
 
 fn text(value: &str) -> Json {
@@ -74,14 +74,40 @@ fn changed(change: &Changed) -> Json {
 }
 
 fn gate_json(gate: &Gate) -> Json {
-    Json::Object(vec![
+    let mut fields = vec![
         ("tier".to_string(), text(&gate.tier)),
         ("new".to_string(), count(gate.new)),
         ("fixed".to_string(), count(gate.fixed)),
         ("existing".to_string(), count(gate.existing)),
         ("verdict".to_string(), text(&gate.verdict)),
         ("ms".to_string(), count(gate.ms as usize)),
-    ])
+    ];
+    if !gate.diagnostics.is_empty() {
+        fields.push((
+            "diagnostics".to_string(),
+            Json::Array(gate.diagnostics.iter().map(diag_json).collect()),
+        ));
+    }
+    Json::Object(fields)
+}
+
+fn diag_json(diag: &GateDiagnostic) -> Json {
+    let mut fields = vec![
+        ("code".to_string(), text(&diag.code)),
+        ("level".to_string(), text(&diag.level)),
+    ];
+    if let Some(el) = &diag.el {
+        fields.push(("el".to_string(), text(el)));
+    }
+    if let Some(owner) = &diag.owner {
+        fields.push(("owner".to_string(), text(owner)));
+    }
+    fields.push(("path".to_string(), text(&diag.path)));
+    fields.push(("line".to_string(), count(diag.line as usize)));
+    fields.push(("col".to_string(), count(diag.col as usize)));
+    fields.push(("message".to_string(), text(&diag.message)));
+    fields.push(("exact".to_string(), Json::Bool(diag.exact)));
+    Json::Object(fields)
 }
 
 #[cfg(test)]

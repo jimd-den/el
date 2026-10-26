@@ -20,10 +20,11 @@ fn recovery_restores_head_before_the_next_command() {
         fs: &memory,
         journal: &store,
         clock: &Fixed(1),
-        tools: &Lint(true),
+        tools: &Scripted::clean(),
         actor: "human".to_string(),
         crate_name: "demo".to_string(),
         root: ".".to_string(),
+        cargo_timeout: 120,
     };
 
     let notes = recover(&env).expect("recovered");
@@ -47,7 +48,7 @@ fn drift_before_a_change_is_refused_without_writing() {
         .expect("drift");
     let writes = memory.writes().len();
 
-    let report = run(&memory, &store, &Fixed(1), &Lint(true), add());
+    let report = run(&memory, &store, &Fixed(1), &Scripted::clean(), add());
 
     assert_eq!(report.error.expect("drift").code, "env.drift");
     assert_eq!(store.head().expect("head"), Some(1));

@@ -15,7 +15,7 @@ fn a_new_change_moves_the_undone_future_to_the_attic() {
 
     let added = el_stdin(
         &built.hello,
-        &["add", "fn", "future", "--in", "src/greet.rs", "--sig", "fn future()", "--body", "-"],
+        &["add", "fn", "future", "--in", "src/greet.rs", "--sig", "fn future()", "--body", "-", "--fast"],
         "go();\n",
     );
     ok(&added, "add after undo");

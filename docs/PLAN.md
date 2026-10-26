@@ -49,7 +49,7 @@ implementation is demanded by a test written first.
 | M6 | Transaction and first verbs | **UC-1**: a program built from five commands | ✅ |
 | M7 | Statements and the read surface | **UC-11/UC-12**: one line changes, nothing else moves | ✅ |
 | M8 | History verbs | **UC-3**: review and rollback | ✅ |
-| M9 | Compiler gate | **UC-2**: told before commit that it would not compile | ☐ stub |
+| M9 | Compiler gate | **UC-2**: told before commit that it would not compile | ✅ |
 | M10 | Semantic layer | **UC-9/UC-10**: RA rename, refs, quick fixes | ☐ stub |
 | M11 | Search and doc | **UC-5**: std lookup without leaving the terminal | ☐ stub |
 | M12 | Agent surface, dogfood, polish | **UC-6/UC-7**: batch, skill, self-compliance | ☐ stub |
@@ -542,6 +542,10 @@ and that the projection is restored.
 
 **Done when.** UC-2 passes; `el add fn` on a 30-module crate runs in ≤ 2 s warm
 (`tests/integration/gate_latency.rs`, advisory).
+
+Shipped 2026-10-26 (PR against `feat/rewrite-message`): UC-2 acceptance test
+`tests/acceptance/gate_reports_only_new_errors.rs` passes; the timed gated add
+measures 0.82 s warm on a 30-module crate. Decisions in ADR-0026.
 
 **This is the milestone that makes the tool worth installing.** Everything before it is a
 convenience; everything after it is a bonus.

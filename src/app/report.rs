@@ -20,6 +20,22 @@ pub struct Changed {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GateDiagnostic {
+    pub code: String,
+    pub level: String,
+    /// The element the diagnostic is attributed to, if the span mapped.
+    pub el: Option<String>,
+    /// The owning item of an attributed statement, if any.
+    pub owner: Option<String>,
+    pub path: String,
+    pub line: u32,
+    pub col: u32,
+    pub message: String,
+    /// False when the diagnostic fell back to file/line attribution.
+    pub exact: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Gate {
     pub tier: String,
     pub new: usize,
@@ -28,6 +44,8 @@ pub struct Gate {
     /// `ok`, `rejected` or `preview`.
     pub verdict: String,
     pub ms: u64,
+    /// The new diagnostics, empty on a pass. Omitted from `--json` when empty.
+    pub diagnostics: Vec<GateDiagnostic>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

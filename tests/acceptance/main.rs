@@ -21,3 +21,4 @@ mod split_policy_is_honoured;
 mod real_program_builds_with_blocks_and_modules;
 mod one_compact_listing_names_the_statement_to_edit;
 mod a_change_messages_how_many_files_it_rewrote;
+mod gate_reports_only_new_errors;

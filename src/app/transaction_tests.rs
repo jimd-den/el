@@ -30,7 +30,7 @@ fn a_model_violation_writes_nothing() {
         anchor: Anchor::End,
     }];
 
-    let report = run(&memory, &store, &Fixed(1), &Lint(true), mutation);
+    let report = run(&memory, &store, &Fixed(1), &Scripted::clean(), mutation);
 
     assert_eq!(report.exit(), Exit::Violation);
     assert_eq!(store.head().expect("head"), Some(1));
@@ -44,7 +44,7 @@ fn a_committed_change_messages_how_many_files_it_rewrote() {
     let store = Store::new(&memory);
     seed(&memory, &store, &catalog());
 
-    let report = run(&memory, &store, &Fixed(1), &Lint(true), add());
+    let report = run(&memory, &store, &Fixed(1), &Scripted::clean(), add());
 
     assert!(report.error.is_none(), "{:?}", report.error);
     assert!(
@@ -63,7 +63,7 @@ fn a_dry_run_restores_the_tree_and_records_preview() {
     let mut mutation = add();
     mutation.dry_run = true;
 
-    let report = run(&memory, &store, &Fixed(1), &Lint(true), mutation);
+    let report = run(&memory, &store, &Fixed(1), &Scripted::clean(), mutation);
 
     assert!(report.error.is_none(), "{:?}", report.error);
     assert_eq!(report.gate.expect("gate").verdict, "preview");
@@ -81,7 +81,7 @@ fn a_strict_lint_refusal_restores_the_tree_and_keeps_head() {
     let mut mutation = add();
     mutation.strict = true;
 
-    let report = run(&memory, &store, &Fixed(1), &Lint(false), mutation);
+    let report = run(&memory, &store, &Fixed(1), &Scripted::clippy_rejects(), mutation);
 
     assert_eq!(report.error.expect("refused").code, "gate.rejected");
     assert_eq!(store.head().expect("head"), Some(1));

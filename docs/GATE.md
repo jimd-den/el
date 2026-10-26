@@ -89,24 +89,34 @@ fingerprint = (code, innermost_el_id, normalized_message)
 - `innermost_el_id` — from the **span map** (`FR-17`): the renderer knows which element owns
   each line of the file it just produced. A position maps to a statement id, or an item id,
   or, in an opaque module, to the file.
-- `normalized_message` — the message with absolute paths, line/column numbers and type
-  parameter names erased, so "expected `u32`, found `&u32`" is stable when it moves down
-  three lines.
+- `normalized_message` — the message with whitespace collapsed and absolute
+  paths replaced by `<path>`, so it is stable across machines and runs.
+  Type-parameter names are deliberately NOT erased: erasure is
+  position-stable, and over-erasing merges distinct errors (ADR-0026).
 
 Line numbers are deliberately **not** in the fingerprint. This is the whole point: because
 `el` renders the file, it can attribute a diagnostic to an id that survives every edit above
 it. A line-based delta would report a phantom "new error" whenever a statement was inserted
 at the top of a body.
 
-A file with no span map (opaque module) falls back to `(code, path, line, message)` and the
-output says `"exact": false`.
+A diagnostic whose span maps to no element falls back to
+`(code, path, normalized_message)` and the output says `"exact": false`.
+The line is display, not identity: a structural edit above a crate-level
+diagnostic moves its span line, and treating that move as a new error
+refused the first `add mod` after `el new` (the scaffold's E0601,
+re-pointed — ADR-0026).
 
 ### 4.2 Baseline
 
 The baseline is the diagnostic set of `head`, stored beside its tree:
 
 ```text
-.el/diags/<treeDigest>   el1 <tier> <fingerprint> <code> <el> <message-sanitized>
+.el/diags/<treeDigest>   el1 <tier> <code> <level> <el|-> <owner|-> <exact 1|0> <path> <line> <col> <message-sanitized>
+
+One tab-separated line per diagnostic; other tiers' lines for the same tree
+are preserved when one tier's set is rewritten. A file that exists records
+a set, even when empty; a missing file is computed once from the previous
+tree (restore, run, record, re-materialize). Corrupt lines are skipped.
 ```
 
 Written after every successful gate and after `el check`. If the baseline is missing (first
@@ -119,7 +129,7 @@ records it — the user never sees an inflated "41 new errors" on the first comm
 el: change rejected — 1 new error (0 fixed, 4 pre-existing)
   error[E0308] src/core/plan.rs:41  el-0102  (in el-0007 core::plan::apply)
     expected `u32`, found `&u32`
-el: no files changed; history unchanged (attempt recorded as seq 42, gate=rejected)
+el: no files changed; history unchanged (attempt recorded as seq 42, gate=rejected:1)
 ```
 
 Three counts, always: new, fixed, pre-existing. A user who fixes ten errors and breaks one
@@ -134,10 +144,10 @@ sees both facts.
 | note | new `warning`s are reported but do not block, unless `--strict` |
 | reject (strict) | any new warning, because `-D warnings` is what CI will run |
 
-`--force` is deliberately absent. To land a change that does not compile, use
-`--no-gate` (recorded as `gate=skip`) or `--fast` (recorded as `gate=model`). Both are
-visible in `el log`, which is the point: an unverified change must be a *recorded* decision,
-not a silent one.
+`--force` and `--no-gate` are deliberately absent (`--no-gate` is
+unimplemented). To land a change that does not compile, use `--fast`
+(recorded as `gate=model`). It is visible in `el log`, which is the point:
+an unverified change must be a *recorded* decision, not a silent one.
 
 ---
 

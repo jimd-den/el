@@ -40,6 +40,8 @@ pub struct Env<'a> {
     pub crate_name: String,
     /// The root path, for the one message that has to name it.
     pub root: String,
+    /// Seconds a gate subprocess may run before it is killed (`$EL_CARGO_TIMEOUT`).
+    pub cargo_timeout: u64,
 }
 
 pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {

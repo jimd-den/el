@@ -121,8 +121,13 @@ fn an_author_builds_a_program_from_nothing_in_five_commands() {
         .collect();
     assert_eq!(entries.len(), 5, "log:\n{}", entries.join("\n"));
     assert!(
-        entries.iter().all(|line| line.contains("model")),
-        "every M6 entry records the model gate: {}",
+        entries[0..3].iter().all(|line| line.contains("check")),
+        "the add entries record the check gate: {}",
+        entries.join("\n")
+    );
+    assert!(
+        entries[3..5].iter().all(|line| line.contains("model")),
+        "the create entries record the model gate: {}",
         entries.join("\n")
     );
 
