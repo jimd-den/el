@@ -497,7 +497,7 @@ future to `.el/attic/`; `redo` then disappears, and `log --attic` still reads th
 entries. Diff compares older → newer and names the statement id when both snapshots
 exist, falling back to a file line diff otherwise.
 
-*Evidence.* `make check` green: 337 unit + 49 acceptance + 16 integration tests,
+*Evidence.* `make check` green: 339 unit + 50 acceptance + 16 integration tests,
 clippy `-D warnings`, `cargo check --all-targets`. UC-3 captures every owned file,
 deletes `src/tmp.rs` through two mutations, undoes four, and compares bytes; redo
 restores the same bytes. Revert's new entry carries the target's `to` digest. Diff

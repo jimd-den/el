@@ -142,7 +142,7 @@ el catalog [--json]
 |---|---|
 | `ls` | What elements exist, with id, kind, alias, module, line count, body mode |
 | `tree` | The three-level outline: crate → modules → items → statements |
-| `show` | Everything about one element: id, alias, visibility, signature, doc, body mode, statement ids, owning sequence |
+| `show` | Everything about one element: id, alias, visibility, signature, doc, body mode, statement ids, owning sequence. A statement id shows its owner, parent, index and text instead. |
 | `explain` | Why it exists: module preamble, doc text, RA hover when available (`FR-55`), callers, tests that name it, last 5 history entries |
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |

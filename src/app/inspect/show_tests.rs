@@ -96,3 +96,29 @@ fn show_an_unnamed_element_has_a_null_alias_and_no_doc() {
     assert!(field(payload, "source").as_str().expect("source").contains("impl Point"));
     assert!(!payload.get("statement_tree").is_some_and(|v| v.as_array().is_some_and(|a| !a.is_empty())));
 }
+
+#[test]
+fn show_a_statement_has_its_owner_and_its_source() {
+    let catalog = fixture();
+    let projection = render(&catalog, "demo");
+    let entries = entries();
+    let stmt = catalog.find_stmt(crate::core::model::id::ElId(14)).expect("statement");
+
+    let view = statement(
+        &catalog,
+        &projection,
+        &entries,
+        stmt,
+        &Options { statements: false, source: true, history: true },
+    );
+
+    assert_eq!(field(&view.payload, "id").as_str(), Some("el-0014"));
+    assert_eq!(field(&view.payload, "kind").as_str(), Some("stmt"));
+    assert_eq!(field(&view.payload, "owner").as_str(), Some("el-0012"));
+    assert_eq!(
+        field(&view.payload, "text").as_str(),
+        Some("format!(\"hello, {name}\")")
+    );
+    assert!(matches!(field(&view.payload, "sequence"), Json::Number(n) if n == "12"));
+    assert!(field(&view.payload, "source").as_str().expect("source").contains("format!"));
+}

@@ -54,7 +54,7 @@ fn run_rebuild(env: &Env<'_>) -> Report {
             report.lines.push(format!("catalog for seq {head} is already identical"));
             report
         }
-        Ok(_) => match env.journal.set_catalog(&snapshot).map_err(error::store) {
+        _ => match env.journal.set_catalog(&snapshot).map_err(error::store) {
             Ok(()) => {
                 let mut report = Report::new("doctor");
                 report.lines.push(format!("rebuilt catalog from seq {head}"));
@@ -62,7 +62,6 @@ fn run_rebuild(env: &Env<'_>) -> Report {
             }
             Err(error) => Report::fail("doctor", error),
         },
-        Err(error) => Report::fail("doctor", error),
     }
 }
 

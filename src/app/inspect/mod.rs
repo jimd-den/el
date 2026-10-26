@@ -11,7 +11,7 @@ mod show;
 mod tree;
 
 pub use ls::{Filter, ls};
-pub use show::{Options, show};
+pub use show::{Options, show, statement};
 pub use tree::tree;
 
 #[cfg(test)]
