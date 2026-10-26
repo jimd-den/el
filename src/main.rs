@@ -108,6 +108,10 @@ fn needs_lock(command: &Command) -> bool {
             | Command::Rm { .. }
             | Command::Mv(_)
             | Command::Run { .. }
+            | Command::Undo { .. }
+            | Command::Redo
+            | Command::Revert { .. }
+            | Command::Doctor { .. }
     )
 }
 
