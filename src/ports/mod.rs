@@ -7,6 +7,7 @@
 
 pub mod clock;
 pub mod fs;
+pub mod journal;
 pub mod tools;
 
 #[cfg(test)]
@@ -14,4 +15,5 @@ pub mod fs_fake;
 
 pub use clock::Clock;
 pub use fs::{Fs, Kind};
+pub use journal::Journal;
 pub use tools::{Finished, Tools};

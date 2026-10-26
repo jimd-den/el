@@ -12,7 +12,8 @@ use std::fmt;
 /// Flags whose next argument is their value.
 pub const VALUE_FLAGS: &[&str] = &[
     "--in", "--after", "--before", "--at", "--vis", "--sig", "--body", "--doc", "--attr",
-    "--preamble", "--root", "--edition", "--body-mode", "--limit", "--module", "--kind", "-n",
+    "--preamble", "--root", "--edition", "--body-mode", "--limit", "--module", "--kind",
+    "--rename", "-n",
 ];
 
 /// A command line `el` refuses to understand.
@@ -123,10 +124,13 @@ impl Args {
         Ok(first)
     }
 
-    /// The first word, which every verb with a subject consumes.
+    /// The word after the verb: the subject every subject-taking verb consumes.
+    ///
+    /// `words[0]` is the verb, so reading `first()` here is how `el new hello`
+    /// once parsed its path as `"new"`. The index is the contract.
     pub fn required(&self, what: &str) -> Result<String, Usage> {
         self.words
-            .first()
+            .get(1)
             .cloned()
             .ok_or_else(|| Usage::new("usage.missing_argument", format!("{what} needs a subject")))
     }

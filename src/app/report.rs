@@ -48,6 +48,10 @@ pub struct Report {
     pub lines: Vec<String>,
     /// Prose about the change itself: warnings, what was chosen, what was skipped.
     pub notes: Vec<String>,
+    /// Verb-specific machine data that has no place in the stable envelope. A
+    /// `log` puts its records here; a mutation leaves it `None` and uses
+    /// `changed`/`gate`.
+    pub payload: Option<crate::core::text::json::Json>,
     pub error: Option<Error>,
 }
 
@@ -61,6 +65,7 @@ impl Report {
             gate: None,
             lines: Vec::new(),
             notes: Vec::new(),
+            payload: None,
             error: None,
         }
     }

@@ -10,7 +10,7 @@
 // believes is in force and is not.
 //
 // It deliberately does not decide what `gate = check` *means* — that is the gate
-// tier's question (M6) — and it does not read the file: text in, value out.
+// tier's question (M9) — and it does not read the file: text in, value out.
 
 use std::fmt;
 

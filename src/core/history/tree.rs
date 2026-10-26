@@ -63,6 +63,12 @@ impl Tree {
         self.entries.iter().map(|(path, _)| path.as_str())
     }
 
+    /// The entries in sorted order. A materializer needs the digest too; exposing
+    /// only paths would make it look every blob up by path, which is not the key.
+    pub fn entries(&self) -> impl Iterator<Item = (&str, &Digest)> {
+        self.entries.iter().map(|(path, digest)| (path.as_str(), digest))
+    }
+
     pub fn digest_of(&self, path: &str) -> Option<&Digest> {
         self.entries
             .iter()

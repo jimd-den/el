@@ -11,8 +11,10 @@
 // validated sigs or module paths would be a second place where the model's rules
 // live, and the first one is `plan`.
 
+pub mod args;
 pub mod parse;
 pub mod request;
 
-pub use parse::{Args, Usage, parse};
+pub use args::{Args, Usage, VALUE_FLAGS};
+pub use parse::parse;
 pub use request::{Add, Command, Edit, Globals, Parsed, Source};

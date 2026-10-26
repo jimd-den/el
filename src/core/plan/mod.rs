@@ -83,6 +83,9 @@ pub fn plan(catalog: &Catalog, asked: &Request<'_>) -> Result<Outcome, Violation
         Change::Rename { id, .. } => rename(&mut next, *id, catalog),
         _ => Vec::new(),
     };
+    if asked.policy.require_preamble {
+        seed_missing_modules(&mut next, asked.crate_name)?;
+    }
 
     let projection = render::render(&next, asked.crate_name);
     match Violations::new(validate::state(&next, &projection, asked.policy)) {
@@ -95,6 +98,51 @@ pub fn plan(catalog: &Catalog, asked: &Request<'_>) -> Result<Outcome, Violation
     }
 }
 
+/// Give every file this change just created a module element with a default
+/// preamble. A file with an existing module is left alone: a missing preamble
+/// there is the user's violation, not something to paper over.
+///
+/// Without this, `mv` into `src/core/gate.rs` would create the empty ancestor
+/// `src/core.rs` and then refuse the move for the preamble that `el` itself made
+/// necessary. The default is a comment, so it is honest and editable; the note is
+/// also what makes the generated file distinguishable from a human's.
+fn seed_missing_modules(catalog: &mut Catalog, crate_name: &str) -> Result<(), Violations> {
+    let files: Vec<String> = render::render(catalog, crate_name)
+        .files
+        .iter()
+        .filter(|file| file.path.ends_with(".rs"))
+        .map(|file| file.path.clone())
+        .collect();
+
+    for path in files {
+        if catalog
+            .elements
+            .iter()
+            .any(|element| element.kind == crate::core::model::kind::Kind::Module && element.module == path)
+        {
+            continue;
+        }
+        let name = path
+            .rsplit('/')
+            .next()
+            .unwrap_or(&path)
+            .trim_end_matches(".rs")
+            .to_string();
+        let id = catalog
+            .add_element(&crate::core::model::element::NewElement {
+                kind: crate::core::model::kind::Kind::Module,
+                module: &path,
+                signature: &format!("mod {name}"),
+                visibility: crate::core::model::element::Visibility::Private,
+            })
+            .map_err(|error| Violations::one(apply_element::catalog_error(error)))?;
+        catalog
+            .add_stmt(id, &format!("// {path} — created by el; add a preamble with `el edit`."))
+            .map_err(|error| Violations::one(apply_element::catalog_error(error)))?;
+    }
+    Ok(())
+}
+
 /// The old name can only be read from the catalog *before* the rename, which is
 /// why `plan` still holds it after working on a copy.
 fn rename(next: &mut Catalog, id: ElId, before: &Catalog) -> Vec<Rewrite> {
@@ -105,8 +153,8 @@ fn rename(next: &mut Catalog, id: ElId, before: &Catalog) -> Vec<Rewrite> {
 }
 
 /// FR-16 says a manifest declares no dependencies *unless the catalog declares
-/// them*, and the catalog has no dependency record yet — that arrives with the
-/// store. Until then an allowed dependency is refused rather than dropped, because
+/// them*, and the catalog has no dependency record yet — that arrives with M12.
+/// Until then an allowed dependency is refused rather than dropped, because
 /// accepting it and writing a manifest without it is the silent deletion this
 /// codebase exists to avoid.
 fn unrepresentable(name: &str) -> Violation {
@@ -121,6 +169,10 @@ fn unrepresentable(name: &str) -> Violation {
 
 #[cfg(test)]
 pub(crate) mod fixture;
+
+#[cfg(test)]
+#[path = "mod_move_tests.rs"]
+mod mod_move_tests;
 
 #[cfg(test)]
 #[path = "mod_tests.rs"]

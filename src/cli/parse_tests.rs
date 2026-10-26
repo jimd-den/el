@@ -11,6 +11,11 @@ fn parsed(line: &str) -> Parsed {
     parse(&argv).unwrap_or_else(|error| panic!("{line:?}: {error}"))
 }
 
+fn parsed_argv(argv: &[&str]) -> Parsed {
+    let argv: Vec<String> = argv.iter().map(|word| word.to_string()).collect();
+    parse(&argv).unwrap_or_else(|error| panic!("{argv:?}: {error}"))
+}
+
 fn refused(line: &str) -> Usage {
     let argv: Vec<String> = line.split_whitespace().map(str::to_string).collect();
     parse(&argv).expect_err(&format!("{line:?} was accepted"))
@@ -18,9 +23,22 @@ fn refused(line: &str) -> Usage {
 
 #[test]
 fn an_add_carries_every_flag_it_was_given() {
-    let command = parsed(
-        "add fn greet --in src/greet.rs --vis pub --sig fn_greet(--body -",
-    )
+    // Spelled as argv, not split on whitespace: `--sig` takes one shell-quoted
+    // word, and `fn_greet(` must not swallow the next flag. The old one-line
+    // spelling did exactly that and tested the typo instead of the parser.
+    let command = parsed_argv(&[
+        "add",
+        "fn",
+        "greet",
+        "--in",
+        "src/greet.rs",
+        "--vis",
+        "pub",
+        "--sig",
+        "fn_greet(",
+        "--body",
+        "-",
+    ])
     .command;
 
     let Command::Add(add) = command else {
@@ -91,6 +109,16 @@ fn mv_reads_the_subject_then_the_module() {
 
     assert_eq!(move_.subject, "el-0004");
     assert_eq!(move_.module.as_deref(), Some("src/core/gate.rs"));
+}
+
+#[test]
+fn edit_reads_a_rename_as_one_value() {
+    let Command::Edit(edit) = parsed("edit el-0007 --rename apply_change").command else {
+        panic!("not an edit");
+    };
+
+    assert_eq!(edit.id, "el-0007");
+    assert_eq!(edit.rename.as_deref(), Some("apply_change"));
 }
 
 #[test]

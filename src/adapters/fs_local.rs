@@ -7,8 +7,9 @@
 // crash after it leaves the new one. There is no third outcome to report.
 //
 // It deliberately does not lock, detect drift, or hold a transaction: those arrive
-// with the first verb (M6) and need a process identity this module has no way to
-// invent. `tmp/` is left in place rather than emptied at construction, so a test can
+// with the first verb and need a process identity this module has no way to invent;
+// they live in `adapters::lock` and `app::projection` instead. `tmp/` is left in place
+// rather than emptied at construction, so a test can
 // show that a leftover staging file is never trusted — the sweep belongs to startup.
 
 use crate::ports::fs::{Error, Fs, Kind};

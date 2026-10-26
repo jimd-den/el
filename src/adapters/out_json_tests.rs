@@ -27,6 +27,7 @@ fn sample() -> Report {
         }),
         lines: vec!["el-0007".to_string()],
         notes: vec!["rust-analyzer 2026-10-13 used for rename".to_string()],
+        payload: None,
         error: None,
     }
 }
@@ -65,6 +66,24 @@ fn a_failure_envelope_carries_the_code_and_the_exit_code_and_no_seq() {
     );
     assert!(!text.contains(r#""seq""#), "a refusal has no sequence number: {text}");
     assert!(text.ends_with("}\n"), "the envelope is one line: {text:?}");
+}
+
+#[test]
+fn verb_specific_data_is_the_last_field_and_keeps_its_canonical_bytes() {
+    let mut report = Report::new("log");
+    report.payload = Some(Json::Array(vec![Json::Object(vec![
+        ("seq".to_string(), Json::Number("1".to_string())),
+        ("gate".to_string(), Json::Str("model".to_string())),
+    ])]));
+
+    assert_eq!(
+        render(&report),
+        concat!(
+            r#"{"el":"1","cmd":"log","ok":true,"changed":[],"#,
+            r#""data":[{"seq":1,"gate":"model"}]}"#,
+            "\n"
+        )
+    );
 }
 
 #[test]

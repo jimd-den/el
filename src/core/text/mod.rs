@@ -1,4 +1,5 @@
 pub mod balance;
+pub mod grammar;
 pub mod ident;
 pub mod json;
 pub mod split;

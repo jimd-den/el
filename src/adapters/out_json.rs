@@ -53,6 +53,9 @@ pub fn render(report: &Report) -> String {
     if !report.notes.is_empty() {
         push("notes", Json::Array(report.notes.iter().map(|note| text(note)).collect()));
     }
+    if let Some(payload) = &report.payload {
+        push("data", payload.clone());
+    }
 
     let mut line = json::write(&Json::Object(fields));
     line.push('\n');

@@ -2,6 +2,7 @@
 // refusal, and where purity is proved rather than asserted.
 
 use super::*;
+use crate::core::model::body::Body;
 use crate::core::model::element::Visibility;
 use crate::core::model::kind::Kind;
 use crate::core::plan::fixture;
@@ -168,6 +169,7 @@ fn a_new_item_arrives_with_its_kind_its_module_and_its_visibility() {
         module: "src/a.rs".to_string(),
         signature: "struct Point { x: u8 }".to_string(),
         visibility: Visibility::Pub,
+        body: Body::default(),
     };
 
     let outcome = plan(&catalog, &ask(&change, &fixture::policy())).expect("allowed");

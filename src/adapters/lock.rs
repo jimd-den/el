@@ -63,9 +63,7 @@ impl Lock {
                     return Err(Held { pid, age_secs });
                 }
                 let _ = fs::remove_file(&path);
-                create(&path, now)
-                    .map(|()| Lock { path, pid: std::process::id() })
-                    .map_err(|held| held)
+                create(&path, now).map(|()| Lock { path, pid: std::process::id() })
             }
         }
     }

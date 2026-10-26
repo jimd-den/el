@@ -1,6 +1,7 @@
 // Tests for the element half of `apply`; sibling of the module they exercise.
 
 use super::*;
+use crate::core::model::body::Body;
 use crate::core::model::element::Visibility;
 use crate::core::model::kind::Kind;
 use crate::core::plan::fixture;
@@ -11,6 +12,7 @@ fn add(signature: &str) -> Change {
         module: "src/a.rs".to_string(),
         signature: signature.to_string(),
         visibility: Visibility::Private,
+        body: Body::default(),
     }
 }
 
@@ -56,7 +58,9 @@ fn an_edit_replaces_the_head_and_keeps_the_id() {
         &mut catalog,
         &Change::EditElement {
             id: run,
-            head: "(n: usize) -> usize".to_string(),
+            head: Some("(n: usize) -> usize".to_string()),
+            visibility: None,
+            body: None,
         },
     )
     .expect("applied");
@@ -75,7 +79,9 @@ fn an_edit_of_an_unknown_id_is_an_unknown_reference() {
         &mut catalog,
         &Change::EditElement {
             id: crate::core::model::id::ElId(7),
-            head: "()".to_string(),
+            head: Some("()".to_string()),
+            visibility: None,
+            body: None,
         },
     );
 

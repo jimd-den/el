@@ -11,6 +11,7 @@
 // never chosen by a caller, or "never reused" (FR-1) would be a promise the
 // caller could break.
 
+use super::body::Body;
 use super::element::Visibility;
 use super::id::ElId;
 use super::kind::Kind;
@@ -23,9 +24,19 @@ pub enum Change {
         module: String,
         signature: String,
         visibility: Visibility,
+        /// The body, already parsed by `text::grammar`; `el` supplies the
+        /// closing braces and semicolons, so this is a tree, not raw text.
+        body: Body,
     },
-    /// Replace an item's head; the name and the body are untouched.
-    EditElement { id: ElId, head: String },
+    /// Replace any of an item's head, visibility and body; `None` keeps that
+    /// field byte for byte (FR-7). A rename is a separate change because it
+    /// rewrites references.
+    EditElement {
+        id: ElId,
+        head: Option<String>,
+        visibility: Option<Visibility>,
+        body: Option<Body>,
+    },
     /// Move an item to another module, keeping its id and its body.
     MoveElement { id: ElId, module: String },
     /// Change an item's name. References are rewritten by `plan::refs`.
