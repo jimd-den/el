@@ -44,12 +44,15 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
         },
         "version" => Command::Version,
         "" => return Err(Usage::new("usage.missing_verb", "el needs a verb")),
-        other => {
-            return Err(Usage::new(
-                "usage.unknown_verb",
-                format!("{other:?} is not a verb; try `el skill`"),
-            ));
-        }
+        other => match super::parse_read::command(other, &args)? {
+            Some(command) => command,
+            None => {
+                return Err(Usage::new(
+                    "usage.unknown_verb",
+                    format!("{other:?} is not a verb; try `el skill`"),
+                ));
+            }
+        },
     };
     check_subject(&args, &command)?;
     Ok(Parsed { globals, command })
@@ -144,12 +147,11 @@ fn count(value: Option<&str>) -> Result<Option<usize>, Usage> {
 fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
     let expected = match command {
         Command::New { .. } => 2,
-        // `mv <id> <module>` consumes three words; `--in` supplies the module.
         Command::Mv(_) if args.has("--in") => 2,
         Command::Mv(_) => 3,
         Command::Add(_) => 3,
-        Command::Edit(_) => 2,
-        Command::Version | Command::Init { .. } => 1,
+        Command::Edit(_) | Command::Show(_) => 2,
+        Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. } => 1,
         Command::Rm { .. } | Command::Run { .. } | Command::Log { .. } => usize::MAX,
     };
     if args.words.len() > expected {
@@ -160,6 +162,10 @@ fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "parse_read_tests.rs"]
+mod parse_read_tests;
 
 #[cfg(test)]
 #[path = "parse_tests.rs"]

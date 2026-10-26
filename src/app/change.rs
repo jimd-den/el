@@ -173,7 +173,7 @@ fn added_statement(before: &Catalog, after: &Catalog) -> Vec<Changed> {
     }]
 }
 
-fn parse_id(text: &str) -> Result<ElId, Error> {
+pub fn parse_id(text: &str) -> Result<ElId, Error> {
     ElId::parse(text).ok_or_else(|| Error {
         code: "notfound.element",
         exit: super::Exit::NotFound,
