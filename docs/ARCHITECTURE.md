@@ -85,12 +85,15 @@ src/
       catalog/codec.rs        165   the deterministic text form (ADR-0015)
       change.rs                85   Change enum: the complete mutation vocabulary
     plan/
-      mod.rs                   35   plan(Change, Catalog) → Projection | Violations
-      apply_element.rs        140   add/edit/rm/mv for items and modules
-      apply_stmt.rs           130   add/edit/rm/mv for statements
-      validate.rs             170   L0 rules (GATE.md §5)
-      refs.rs                 120   alias resolution, reference index, rename/rewrite
-      policy.rs                90   el.policy parsing and evaluation
+      mod.rs                  127   plan(Catalog, Request) → Outcome | Violations (ADR-0017)
+      apply_element.rs         73   add/edit/mv/rm/rename for items and modules
+      apply_stmt.rs            94   add/edit/mv for statements; a cross-body move is a refusal
+      validate.rs             165   L0 rules that read only the catalog
+      rendered.rs             159   L0 rules that need the text: ceiling, fn budget, preamble
+      request.rs               96   L0 rules about the ask: cross-body, dep, dangling ref
+      violation.rs            161   Code (one per rule), Violation, non-empty Violations
+      refs.rs                 162   reference index; rename rewrites, delete reports
+      policy.rs               153   el.policy parsing, defaults, error with its line
     render/
       mod.rs                   86   Projection, `render`, ordering contract (FR-13)
       rust.rs                 137   one module's file: marker, preamble, mod lines, items
@@ -107,6 +110,8 @@ src/
     text/
       mod.rs                    6
       scan.rs                 180   string/char/raw-string/comment/delimiter scanner
+      ident.rs                144   where the identifiers that are *code* are (not in strings)
+      balance.rs               92   whether a body's delimiters close, ignoring literals
       terminator.rs           140   where a statement may end: `;`, `}`, operator
                                    continuation (`else`, `as`, `.`)
       split.rs                110   lexical statement splitter (I6, FR-64, FR-65)

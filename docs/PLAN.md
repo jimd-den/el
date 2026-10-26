@@ -214,6 +214,62 @@ and the file mtime is unchanged.
 
 **Done when.** `make check` green; every violation has a distinct code and one test.
 
+**Status 2026-10-25: ✅ — with one boundary correction and two splits the plan did not name.**
+
+*The RED test could not be written as specified, and pretending otherwise would have been the
+dishonest move.* The milestone asks `model_violation_writes_nothing.rs` to assert **exit 2** and
+an **unchanged mtime**. There is no binary and no store until M5 (`src/main.rs` is
+`fn main() {}`), so neither exists to assert. The test therefore proves the property at the only
+boundary that is real: the catalog that goes in is byte-identical to the one that comes back
+(`encode()` before and after), and the refusal names `el-NNNN` and the computed size. `plan`
+takes `&Catalog`, so "nothing was written" is a property of the signature (ADR-0017) and the
+test is the witness. **Exit 2, the untouched mtime, and the ≤ 20 ms budget are M5's half of
+FR-18 and are not claimed here.**
+
+*The eleven rules needed three files, not one.* `validate.rs` was 279 lines with every rule in
+it. The seam was not length but what can answer the question:
+
+| File | Answers | Rules |
+|---|---|---|
+| `request.rs` | what was *asked for* | cross-body move, denied dependency, removal leaving a reference |
+| `validate.rs` | what the catalog *is* | duplicate alias, unknown ref, unbalanced, bad ident, forbidden |
+| `rendered.rs` | what the text *would say* | ceiling, function budget, preamble |
+
+`request` runs first because it is free and because its message names ids the user still
+recognises. `rendered` was the second split: the ceiling rule needs the two largest extractable
+statements to be advice rather than a wall (FR-73), which is a projection question.
+
+*The eleven rules, each with a code and a test.* `Code::all()` is exhaustive by test, and every
+code is spelled `model.*` in one `match`, so a rule cannot ship without a name. Along the way
+`text::balance` (a body whose delimiters close, ignoring literals) and `text::ident` (where the
+identifiers that are *code* are) became reusable, and `plan::refs` is built on the second: a
+rename rewrites `apply(p)` and leaves `"apply"`, `// apply` and `applier` alone.
+
+**What was pinned, and how it was proved.** Eight test files went green on their first run after
+a stub, which is a pin, not a red. Each was proved by mutation instead:
+
+| Mutation | What failed |
+|---|---|
+| `unbalanced` fires for every body | 6 tests, including the clean-catalog case |
+| the ceiling check is skipped | 4 tests, including both size assertions |
+| the function budget counts braces | `an_element_over_the_function_budget_names_its_body_size` |
+| a cross-body move is allowed | `a_statement_moved_into_another_body_is_refused` |
+| a module always has a preamble | `a_module_without_a_preamble_is_refused_when_the_policy_requires_one` |
+| `rewrite` uses `match_indices` | 2 tests: a comment and a string got rewritten, and unscannable text stopped being refused |
+| `references` uses `match_indices` | 4 tests, including "a name in a string is not a reference" |
+
+**Two findings the plan did not anticipate.** The preamble rule caught a design question: the
+crate root is a file like any other, so `require_preamble` applies to `src/main.rs` too. The
+first version of the test passed by asserting a special case; the rule has none, and the test
+now declares a root preamble instead. And `plan::refs::occurrences` was first asserted at byte
+17 for `"apply; applier; apply"` — arithmetic I got wrong in the test I had just written. The
+third occurrence is at 16, which is provable by counting; the expectation was corrected before
+the implementation was trusted with it, and the counting is in the test's own line.
+
+**Files.** `src/core/plan/` in nine modules (127, 73, 94, 165, 159, 96, 161, 162, 153 lines)
+plus `text/ident.rs` (144) and `text/balance.rs` (105); largest file 181 (`apply_element_tests`).
+Gate: 283 tests, `make check` exit 0.
+
 ---
 
 ### M5 — The store
