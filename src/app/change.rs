@@ -35,8 +35,12 @@ pub fn add(env: &super::Env<'_>, add: Add, stdin: &str, split: Split) -> Result<
     }
 
     let module = match add.kind {
-        Kind::Module => add.name.clone(),
-        _ => add.module.clone().unwrap_or_else(|| body::root_module(env)),
+        Kind::Module => body::normalize_module(&add.name),
+        _ => add
+            .module
+            .clone()
+            .map(|module| body::normalize_module(&module))
+            .unwrap_or_else(|| body::root_module(env)),
     };
     let signature = body::signature(&add);
     let (body, mode) = match add.kind {
@@ -130,6 +134,7 @@ pub fn move_(mov: Mv) -> Result<Change, Error> {
         exit: super::Exit::Usage,
         message: "mv needs a module or --after".to_string(),
     })?;
+    let module = body::normalize_module(&module);
     Ok(Change::MoveElement {
         id: parse_id(&mov.subject)?,
         module,

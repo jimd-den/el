@@ -77,6 +77,46 @@ fn a_statement_that_opens_a_block_it_never_closes_is_unbalanced() {
 }
 
 #[test]
+fn a_block_with_children_balances_over_its_subtree() {
+    let mut catalog = fixture::catalog();
+    let run = fixture::function(&mut catalog, "src/a.rs", "fn run()");
+    let block = catalog.add_stmt(run, "if ready {").expect("stmt");
+    catalog.add_child_stmt(block, "go();").expect("child");
+
+    let found = state(&catalog, &fixture::projection(&catalog), &fixture::policy());
+
+    assert!(!found.iter().any(|violation| violation.code == Code::Unbalanced), "{found:?}");
+}
+
+#[test]
+fn a_nested_block_balances_over_its_subtree() {
+    let mut catalog = fixture::catalog();
+    let run = fixture::function(&mut catalog, "src/a.rs", "fn run()");
+    let outer = catalog.add_stmt(run, "if ready {").expect("stmt");
+    let inner = catalog.add_child_stmt(outer, "if set {").expect("child");
+    catalog.add_child_stmt(inner, "go();").expect("grandchild");
+
+    let found = state(&catalog, &fixture::projection(&catalog), &fixture::policy());
+
+    assert!(!found.iter().any(|violation| violation.code == Code::Unbalanced), "{found:?}");
+}
+
+#[test]
+fn a_child_that_leaves_a_delimiter_open_is_unbalanced() {
+    let mut catalog = fixture::catalog();
+    let run = fixture::function(&mut catalog, "src/a.rs", "fn run()");
+    let block = catalog.add_stmt(run, "if ready {").expect("stmt");
+    catalog.add_child_stmt(block, "let v = vec![1, 2;").expect("child");
+
+    let found = state(&catalog, &fixture::projection(&catalog), &fixture::policy());
+    let unbalanced: Vec<_> =
+        found.iter().filter(|violation| violation.code == Code::Unbalanced).collect();
+
+    assert_eq!(unbalanced.len(), 1, "{found:?}");
+    assert_eq!(unbalanced[0].id, Some(block));
+}
+
+#[test]
 fn a_head_with_an_unclosed_parenthesis_is_unbalanced() {
     let mut catalog = fixture::catalog();
     fixture::function(&mut catalog, "src/a.rs", "fn run(p: &Plan");

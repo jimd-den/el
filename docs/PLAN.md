@@ -510,6 +510,18 @@ a SIGKILL leaves.
 `env.corrupt` rather than a guessed catalog. `log` still lists journal entries ahead
 of `head` until a new mutation moves them, so `head` is the authority. See ADR-0022.
 
+*Real programs (post-M8 fix).* Building a two-module program only with el verbs
+found three breaks in what M7/M8 shipped: multi-line blocks refused as
+unbalanced, a bare module name becoming a phantom tree node, and `add mod`
+with a bare name colliding with itself. Fixed on a branch stacked on M8:
+L0 now judges balance over a statement subtree (ADR-0023), and module
+references are normalized to one file path at the command-line boundary.
+Acceptance: `tests/acceptance/real_program_builds_with_blocks_and_modules.rs`
+— two modules, multi-line `if`/`for`, a cross-module call, `el run` green.
+M7/M8 stay ✅; this is a fix to them, not a new milestone, and statement
+editing of blocks is what it unblocks. Deliberate boundary kept: a childless
+block opener still refuses (write an empty block single-line).
+
 ---
 
 ### M9 — Compiler gate — *the headline promise*
