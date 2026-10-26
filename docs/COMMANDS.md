@@ -127,12 +127,22 @@ rm el-0011
 
 The whole script is one transaction: one journal entry, one gate, all-or-nothing (`FR-10`).
 
+`batch` is `apply`'s JSON sibling, built: it reads a JSON array from stdin, one
+object per `add` (`kind`, `name`, `in`, `vis`, `sig`, `body`; a module item's
+`body` becomes its preamble), and commits all items under one sequence —
+or nothing. A plan failure names its change (`change {i} ({kind} {name} in
+{module})`); a gate rejection restores the tree and journals one
+`rejected:<n>` attempt. Statements are refused (`usage.unsupported`):
+they need ids that do not exist until planning. `--dry-run` previews the
+whole batch; `--fast` and `--strict` pass through as for `add`.
+
 ### 4.3 Inspect
 
 ```text
 el ls [--module <m>] [--kind <k>] [--opaque] [--json]
 el tree [--statements] [--json]
 el show <id> [--statements] [--source] [--history] [--terse] [--json]
+el find <query> [--json]
 el explain <id> [--json]
 el refs <id> [--json]
 el catalog [--json]
@@ -143,6 +153,7 @@ el catalog [--json]
 | `ls` | What elements exist, with id, kind, alias, module, line count, body mode |
 | `tree` | The three-level outline: crate → modules → items → statements |
 | `show` | Everything about one element: id, alias, visibility, signature, doc, body mode, statement ids, owning sequence. A statement id shows its owner, parent, index and text instead. `--terse` collapses the header to one line (`<id> <kind> <alias> <module> <signature>`, or `<id> stmt owner <owner> parent <parent> <text>` for a statement) and lists statement bodies under it; `--source` / `--history` sections and the JSON payload are unchanged. |
+| `find` | The ids for a name, without the whole-crate dump: a query matches a named element when it equals its bare name, its alias, or its `module::name` path. Outline lines only (`<id> <alias>`), no bodies. No match is `notfound.element`, exit 6. |
 | `explain` | Why it exists: module preamble, doc text, RA hover when available (`FR-55`), callers, tests that name it, last 5 history entries |
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |
@@ -253,7 +264,7 @@ Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `seq`, 
 `changed[].id`, `gate.*`, `diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
 
 Error codes are namespaced and stable:
-`usage.unknown_flag`, `usage.unsupported`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
+`usage.unknown_flag`, `usage.unsupported`, `usage.bad_batch`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
 `model.cross_body_move`, `gate.rejected`, `env.missing_tool`, `env.tool_failed`, `env.timeout`,
 `env.bad_policy`, `env.drift`, `env.offline_miss`,
 `conflict.locked`, `notfound.element`, `ra.timeout`, `internal.panic`.
@@ -272,12 +283,14 @@ tree  data = {crate, modules: [{path, module, module_id|null, items: [
 show  data = {id, kind, alias|null, module, visibility, signature, doc|null,
               mode, sequence|null, statements: [id],
               statement_tree?, source?, history?}
+find  data = [{id, kind, alias|null, module}]
 ```
 
 `statement_tree` is `[{id, text, children: [...]}]` and appears only with
 `--statements`. `source` appears only with `--source`; `history` only with
 `--history`. `ls` orders by module path, then id; `tree` walks the renderer's
-module tree; both are the order the files are written in.
+module tree; both are the order the files are written in. `find` orders by
+module path, then id, like `ls`.
 
 ---
 

@@ -7,4 +7,4 @@ pub mod catalog;
 pub mod change;
 
 mod modifier;
-mod signature;
+pub mod signature;

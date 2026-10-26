@@ -109,6 +109,7 @@ fn needs_lock(command: &Command) -> bool {
         Command::New { .. }
             | Command::Init { .. }
             | Command::Add(_)
+            | Command::Batch
             | Command::Edit(_)
             | Command::Rm { .. }
             | Command::Mv(_)
@@ -127,6 +128,7 @@ fn uses_stdin(command: &Command) -> bool {
     match command {
         Command::Add(add) => source(&add.body) || source(&add.preamble) || source(&add.doc),
         Command::Edit(edit) => source(&edit.body) || source(&edit.doc),
+        Command::Batch => true,
         _ => false,
     }
 }

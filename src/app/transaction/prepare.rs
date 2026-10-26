@@ -5,15 +5,63 @@
 
 use super::gate;
 use super::load;
-use super::outcome;
 use super::projection;
 use super::stage;
-use super::super::{change, Env};
+use super::super::{change, Env, Exit};
 use super::{error, Mutation};
 use crate::core::history::object::Digest;
 use crate::core::history::tree::Tree;
 use crate::core::model::catalog::Catalog;
+use crate::core::model::change::Change;
+use crate::core::model::signature;
+use crate::core::plan::Violations;
 use crate::core::render::{render, Projection};
+
+pub fn violation_error(violations: Violations, context: Option<String>) -> error::Error {
+    let first = violations.first();
+    let message = match context {
+        Some(context) => format!("{context}: {violations}"),
+        None => violations.to_string(),
+    };
+    error::Error {
+        code: first.code.as_str(),
+        exit: if first.code == crate::core::plan::Code::UnknownRef {
+            Exit::NotFound
+        } else {
+            Exit::Violation
+        },
+        message,
+    }
+}
+
+/// One line naming a change in a multi-change refusal, so the caller can
+/// tell which item failed without an id that was never issued.
+fn describe_change(index: usize, change: &Change) -> String {
+    let desc = match change {
+        Change::AddElement {
+            kind,
+            module,
+            signature,
+            ..
+        } => {
+            let name = signature::split(*kind, signature)
+                .and_then(|(name, _)| name)
+                .unwrap_or(signature.as_str());
+            format!("{} {name} in {module}", kind.as_str())
+        }
+        Change::EditElement { id, .. } => format!("edit {id}"),
+        Change::MoveElement { id, .. } => format!("mv {id}"),
+        Change::Rename { id, .. } => format!("rename {id}"),
+        Change::AddStmt { owner, .. } => format!("add stmt to {owner}"),
+        Change::EditStmt { id, .. } => format!("edit stmt {id}"),
+        Change::EditBody { id, .. } => format!("edit body {id}"),
+        Change::ReorderStmt { id, .. } => format!("reorder stmt {id}"),
+        Change::MoveStmt { id, .. } => format!("mv stmt {id}"),
+        Change::Remove { id } => format!("rm {id}"),
+        Change::AddDep { name } => format!("add dep {name}"),
+    };
+    format!("change {index} ({desc})")
+}
 
 pub(super) struct Prepared {
     pub(super) seq: u64,
@@ -43,7 +91,7 @@ pub(super) fn prepare(env: &Env<'_>, mutation: &Mutation, notes: &mut Vec<String
     let mut working = catalog.clone();
     let mut projection = render(&working, &env.crate_name);
     let mut changed = Vec::new();
-    for change in &mutation.changes {
+    for (index, change) in mutation.changes.iter().enumerate() {
         let before = working.clone();
         let outcome = crate::core::plan::plan(
             &working,
@@ -53,7 +101,11 @@ pub(super) fn prepare(env: &Env<'_>, mutation: &Mutation, notes: &mut Vec<String
                 crate_name: &env.crate_name,
             },
         )
-        .map_err(outcome::violation_error)?;
+        .map_err(|violations| {
+            let context = (mutation.changes.len() > 1)
+                .then(|| describe_change(index, change));
+            violation_error(violations, context)
+        })?;
         changed.extend(change::describe(change, &before, &outcome.catalog));
         working = outcome.catalog;
         projection = outcome.projection;

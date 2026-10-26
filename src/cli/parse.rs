@@ -26,6 +26,7 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
             force: args.has("--force"),
         },
         "add" => Command::Add(add(&args)?),
+        "batch" => Command::Batch,
         "edit" => Command::Edit(edit(&args)?),
         "rm" => Command::Rm {
             ids: args.words[1..].to_vec(),
@@ -165,7 +166,8 @@ fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
         Command::Mv(_) if args.has("--in") => 2,
         Command::Mv(_) => 3,
         Command::Add(_) => 3,
-        Command::Edit(_) | Command::Show(_) => 2,
+        Command::Batch => 1,
+        Command::Edit(_) | Command::Show(_) | Command::Find(_) => 2,
         Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. } => 1,
         Command::Diff { .. } => 3,
         Command::Undo { .. } | Command::Revert { .. } => 2,

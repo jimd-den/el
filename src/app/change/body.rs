@@ -137,6 +137,7 @@ fn opaque(text: &str) -> Body {
 fn read_source(env: &Env<'_>, source: &Source, stdin: &str) -> Result<String, Error> {
     match source {
         Source::Stdin => Ok(stdin.to_string()),
+        Source::Literal(text) => Ok(text.clone()),
         Source::File(path) => {
             let bytes = env
                 .fs

@@ -37,6 +37,25 @@ pub fn tree(env: &Env<'_>, statements: bool) -> Report {
     report("tree", inspect::tree(&catalog, &env.crate_name, statements), notes)
 }
 
+pub fn find(env: &Env<'_>, query: &str) -> Report {
+    let (catalog, _, notes) = match prepare(env) {
+        Ok(loaded) => loaded,
+        Err(error) => return Report::fail("find", error),
+    };
+    let view = inspect::find(&catalog, query);
+    if view.lines.is_empty() {
+        return Report::fail(
+            "find",
+            error::Error {
+                code: "notfound.element",
+                exit: Exit::NotFound,
+                message: format!("{query} does not match any element"),
+            },
+        );
+    }
+    report("find", view, notes)
+}
+
 pub fn show(
     env: &Env<'_>,
     id: &str,

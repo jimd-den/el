@@ -9,7 +9,6 @@ use crate::core::gate::{Delta, Diagnostic, Level, Tier};
 use crate::core::history::entry::Entry;
 use crate::core::history::tree::Tree;
 use crate::core::model::catalog::Catalog;
-use crate::core::plan::Violations;
 
 /// The judged change, as one argument: its tier, its delta, and the catalog
 /// that turns element ids into owner names for the diagnostic lines.
@@ -159,19 +158,6 @@ pub fn preview(
     report.gate = Some(gate_report(verdict.tier, verdict.delta, "preview", ms));
     report.lines = diagnostic_lines(verdict.catalog, &verdict.delta.new);
     report
-}
-
-pub fn violation_error(violations: Violations) -> Error {
-    let first = violations.first();
-    Error {
-        code: first.code.as_str(),
-        exit: if first.code == crate::core::plan::Code::UnknownRef {
-            Exit::NotFound
-        } else {
-            Exit::Violation
-        },
-        message: violations.to_string(),
-    }
 }
 
 /// A failure after the entry was staged but before it committed. Restore the tree,

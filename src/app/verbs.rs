@@ -10,16 +10,18 @@ use super::Env;
 use crate::cli::request::{Add, Edit, Globals, Mv};
 use crate::core::history::entry::Op;
 
+mod batch;
 mod diff;
 mod doctor;
 mod history;
 mod inspect;
 mod read;
 
+pub use batch::batch;
 pub use diff::diff;
 pub use doctor::doctor;
 pub use history::{redo, revert, undo};
-pub use inspect::{ls, show, tree};
+pub use inspect::{find, ls, show, tree};
 pub use read::{log, run, version};
 
 pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {

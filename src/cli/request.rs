@@ -35,11 +35,13 @@ impl Globals {
     }
 }
 
-/// Where an item's text comes from: a file, or stdin to EOF.
+/// Where an item's text comes from: a file, stdin to EOF, or a literal
+/// carried by the caller (a batch item's body, which never touches a file).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Source {
     Stdin,
     File(String),
+    Literal(String),
 }
 
 impl Source {
@@ -110,6 +112,12 @@ pub struct Tree {
     pub statements: bool,
 }
 
+/// `el find <query>`: named elements by bare name, alias, or module path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Find {
+    pub query: String,
+}
+
 /// `el show <id>`: one element, addressed by its permanent id only.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Show {
@@ -138,6 +146,8 @@ pub enum Command {
     Ls(Ls),
     Tree(Tree),
     Show(Show),
+    Find(Find),
+    Batch,
     Version,
 }
 
@@ -161,6 +171,8 @@ impl Command {
             Command::Ls(_) => "ls",
             Command::Tree(_) => "tree",
             Command::Show(_) => "show",
+            Command::Find(_) => "find",
+            Command::Batch => "batch",
             Command::Version => "version",
         }
     }
