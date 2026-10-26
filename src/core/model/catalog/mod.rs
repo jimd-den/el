@@ -27,7 +27,7 @@ pub enum Error {
     UnknownId(ElId),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Catalog {
     pub elements: Vec<Element>,
     pub statements: Vec<Stmt>,
