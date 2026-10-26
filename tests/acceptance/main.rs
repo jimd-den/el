@@ -1,4 +1,7 @@
 mod author_builds_program_from_nothing;
+mod program;
+mod read_verbs_filter_and_refuse;
+mod read_verbs_navigate_without_source;
 mod corrupt_object_is_detected;
 mod diagnostics_map_to_elements;
 mod manifest_has_no_deps_by_default;

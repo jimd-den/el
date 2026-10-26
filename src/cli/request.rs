@@ -92,6 +92,29 @@ pub struct Mv {
     pub after: Option<String>,
 }
 
+/// `el ls`: the catalog as a table, optionally narrowed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Ls {
+    pub module: Option<String>,
+    pub kind: Option<Kind>,
+    pub opaque: bool,
+}
+
+/// `el tree`: the outline of the crate, with statements on request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tree {
+    pub statements: bool,
+}
+
+/// `el show <id>`: one element, addressed by its permanent id only.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Show {
+    pub id: String,
+    pub statements: bool,
+    pub source: bool,
+    pub history: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     New { path: String, lib: bool, policy: bool },
@@ -102,6 +125,9 @@ pub enum Command {
     Mv(Mv),
     Run { args: Vec<String> },
     Log { count: Option<usize> },
+    Ls(Ls),
+    Tree(Tree),
+    Show(Show),
     Version,
 }
 
@@ -117,6 +143,9 @@ impl Command {
             Command::Mv(_) => "mv",
             Command::Run { .. } => "run",
             Command::Log { .. } => "log",
+            Command::Ls(_) => "ls",
+            Command::Tree(_) => "tree",
+            Command::Show(_) => "show",
             Command::Version => "version",
         }
     }

@@ -128,6 +128,16 @@ pub(super) fn with_semicolons(mut siblings: Vec<BodyStmt>) -> Vec<BodyStmt> {
 /// A non-last statement needs a semicolon unless it already ends in `;`, `{`, `}`
 /// or `,`; the last is a tail expression, except for the keywords above.
 fn needs_semicolon(text: &str, is_last: bool) -> bool {
+    // A comment or attribute is not an expression: a `;` after it would land
+    // inside the comment or between the attribute and the item it decorates.
+    let trimmed = text.trim_start();
+    if trimmed.starts_with("//")
+        || trimmed.starts_with("/*")
+        || trimmed.starts_with("#[")
+        || trimmed.starts_with("#!")
+    {
+        return false;
+    }
     let ends = matches!(text.chars().last(), Some(';' | '{' | '}' | ','));
     !ends && (!is_last || TAIL_FORBIDDEN.contains(&first_word(text)))
 }

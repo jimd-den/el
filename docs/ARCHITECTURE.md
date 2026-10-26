@@ -64,8 +64,9 @@ Estimated totals: ~6,000 lines of source across ~70 files, largest ~180.
 
 Measured 2026-10-26 (M6, the files that exist): `main.rs` 122; `app/change` 175 + 88,
 `app/transaction` 190 + 18 + 65 + 19, `app/verbs` 191, `app/projection` 123, `app/create`
-94, `app/load` 58; `ports/journal` 60; `adapters/store` 188 + 47 + 87; `core/text/grammar`
-119 + 120; `core/model/body` 20; `cli/args` 141, `cli/parse` 166. The tree below is still
+94, `app/load` 58; `app/inspect` 122 + 77 + 44; `ports/journal` 60; `adapters/store` 188 + 47 + 87;
+`core/text/grammar` 148 + 133; `core/model/body` 20; `cli/args` 141, `cli/parse` 136,
+`cli/parse_read` 44. The tree below is still
 the target for M7–M12; a line that names a file M6 has replaced is marked by the measured
 sizes above.
 

@@ -14,6 +14,7 @@ pub mod change;
 pub mod create;
 pub mod error;
 pub mod exit;
+pub mod inspect;
 pub mod load;
 pub mod projection;
 pub mod report;
@@ -71,5 +72,10 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
         Command::Mv(mv) => verbs::move_(env, &parsed.globals, mv.clone()),
         Command::Run { args } => verbs::run(env, args),
         Command::Log { count } => verbs::log(env, *count),
+        Command::Ls(ls) => verbs::ls(env, ls.module.as_deref(), ls.kind, ls.opaque),
+        Command::Tree(tree) => verbs::tree(env, tree.statements),
+        Command::Show(show) => {
+            verbs::show(env, &show.id, show.statements, show.source, show.history)
+        }
     }
 }

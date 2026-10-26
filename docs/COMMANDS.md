@@ -254,6 +254,27 @@ Error codes are namespaced and stable:
 
 ---
 
+### 5.1 Read payloads
+
+Read verbs put their verb-specific object under `data`; the envelope fields above
+do not change. The shapes are stable in the same sense as the envelope.
+
+```text
+ls    data = [{id, kind, alias|null, module, lines|null, mode}]
+tree  data = {crate, modules: [{path, module, module_id|null, items: [
+              {id, kind, alias|null, statement_tree?}]}]}
+show  data = {id, kind, alias|null, module, visibility, signature, doc|null,
+              mode, sequence|null, statements: [id],
+              statement_tree?, source?, history?}
+```
+
+`statement_tree` is `[{id, text, children: [...]}]` and appears only with
+`--statements`. `source` appears only with `--source`; `history` only with
+`--history`. `ls` orders by module path, then id; `tree` walks the renderer's
+module tree; both are the order the files are written in.
+
+---
+
 ## 6. Output conventions
 
 - Ids are printed raw (`el-0007`), so `$(el add fn …)` composes.

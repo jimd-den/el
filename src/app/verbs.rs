@@ -10,8 +10,10 @@ use super::Env;
 use crate::cli::request::{Add, Edit, Globals, Mv};
 use crate::core::history::entry::Op;
 
+mod inspect;
 mod read;
 
+pub use inspect::{ls, show, tree};
 pub use read::{log, run, version};
 
 pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
