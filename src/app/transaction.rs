@@ -86,9 +86,10 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
     if let Err(error) = stage::stage(env, &entry) {
         return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error);
     }
-    if let Err(error) = projection::materialize(env, &prepared.projection, &prepared.old_tree, &prepared.new_tree) {
-        return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error);
-    }
+    let written = match projection::materialize(env, &prepared.projection, &prepared.old_tree, &prepared.new_tree) {
+        Ok(written) => written,
+        Err(error) => return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error),
+    };
 
     let passed = match gate::gate(env, mutation.strict) {
         Ok(passed) => passed,
@@ -107,6 +108,8 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
     if let Err(error) = stage::commit(env, prepared.seq, &prepared.catalog, &entry) {
         return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error);
     }
+
+    notes.push(written.message());
 
     let mut report = Report::new(mutation.cmd);
     report.seq = Some(prepared.seq);

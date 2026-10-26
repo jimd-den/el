@@ -33,13 +33,35 @@ pub fn tree_of(env: &super::Env<'_>, projection: &Projection) -> Result<Tree, Er
 ///
 /// Contract: a path present in both trees with the same digest is not touched,
 /// so an edit does not churn every file's mtime.
+/// How many files one materialize wrote, split by new and rewritten, so a
+/// committed change can message its own footprint.
+pub struct Written {
+    pub added: usize,
+    pub changed: usize,
+}
+
+impl Written {
+    pub fn message(&self) -> String {
+        let total = self.added + self.changed;
+        let files = if total == 1 { "file" } else { "files" };
+        if self.added == 0 {
+            format!("el: rewrote {total} {files}")
+        } else if self.changed == 0 {
+            format!("el: wrote {total} {files}")
+        } else {
+            format!("el: wrote {total} {files} ({} new, {} rewritten)", self.added, self.changed)
+        }
+    }
+}
+
 pub fn materialize(
     env: &super::Env<'_>,
     projection: &Projection,
     old: &Tree,
     new: &Tree,
-) -> Result<(), Error> {
+) -> Result<Written, Error> {
     let diff = old.diff(new);
+    let written = Written { added: diff.added.len(), changed: diff.changed.len() };
 
     for path in diff.added.iter().chain(diff.changed.iter()) {
         let file = projection
@@ -52,7 +74,7 @@ pub fn materialize(
     for path in &diff.removed {
         env.fs.remove(path).map_err(error::filesystem)?;
     }
-    Ok(())
+    Ok(written)
 }
 
 /// Put `tree` back on disk exactly: write every blob, then remove every owned
