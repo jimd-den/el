@@ -80,7 +80,7 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
         Command::Ls(ls) => verbs::ls(env, ls.module.as_deref(), ls.kind, ls.opaque),
         Command::Tree(tree) => verbs::tree(env, tree.statements),
         Command::Show(show) => {
-            verbs::show(env, &show.id, show.statements, show.source, show.history)
+            verbs::show(env, &show.id, show.statements, show.source, show.history, show.terse)
         }
     }
 }

@@ -21,6 +21,7 @@ pub(super) fn command(verb: &str, args: &Args) -> Result<Option<Command>, Usage>
             statements: args.has("--statements"),
             source: args.has("--source"),
             history: args.has("--history"),
+            terse: args.has("--terse"),
         }),
         _ => return Ok(None),
     };

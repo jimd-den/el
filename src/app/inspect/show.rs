@@ -15,6 +15,7 @@ use crate::core::text::json::Json;
 mod context;
 mod detail;
 mod statement;
+mod terse;
 
 pub use statement::statement;
 
@@ -22,6 +23,7 @@ pub struct Options {
     pub statements: bool,
     pub source: bool,
     pub history: bool,
+    pub terse: bool,
 }
 
 pub fn show(
@@ -57,6 +59,10 @@ pub fn show(
         ),
     ];
 
+    if options.terse {
+        lines = vec![terse::element_line(element, &signature)];
+    }
+
     let mut fields = vec![
         ("id".to_string(), Json::Str(element.id.to_string())),
         ("kind".to_string(), Json::Str(element.kind.as_str().to_string())),
@@ -74,8 +80,12 @@ pub fn show(
     ];
 
     if options.statements {
-        lines.push("statements:".to_string());
-        statement_lines(catalog, element.id, 2, &mut lines);
+        if options.terse {
+            terse::statement_lines(catalog, element.id, 2, &mut lines);
+        } else {
+            lines.push("statements:".to_string());
+            statement_lines(catalog, element.id, 2, &mut lines);
+        }
         fields.push((
             "statement_tree".to_string(),
             statement_json(catalog, element.id),
