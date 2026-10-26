@@ -443,13 +443,14 @@ tree; `el ls` and `el show` answer from the catalog without opening a source fil
 **Status 2026-10-26: ✅ — read surface and statement editing.**
 
 *What landed.* `el ls [--module] [--kind] [--opaque]`, `el tree [--statements]`,
-and `el show <id> [--statements] [--source] [--history]`, human and `--json`
+and `el show <id> [--statements] [--source] [--history]`, human and `--json`; statement
+ids work in `ls --kind stmt` and `show` too
 through the existing envelope's `data` field. `show` is id-only: an alias is
 `notfound.element` and exit 6, the same refusal `edit` gives. Ordering is the
 renderer's. Read verbs recover an interrupted transaction like `log`; they do not
 refuse drift, because they answer from the catalog (ADR-0020).
 
-*Evidence.* `make check` green: 334 unit + 42 acceptance + 16 integration tests,
+*Evidence.* `make check` green: 339 unit + 50 acceptance + 16 integration tests,
 clippy `-D warnings`, `cargo check --all-targets`. The acceptance tests build a
 crate through the real binary, then prove `tree` contains every element id and
 `show --source` contains a full body without reading a `.rs` file. The golden
@@ -463,7 +464,7 @@ siblings `0..n`. `split = auto|always|never` is policy: `never` keeps a body opa
 and attributes attach to the statement that follows them. `model.bad_stmt` refuses
 a body that would become several statements. See ADR-0021.
 
-*Evidence.* `make check` green: 334 unit + 42 acceptance + 16 integration tests,
+*Evidence.* `make check` green: 339 unit + 50 acceptance + 16 integration tests,
 clippy `-D warnings`, `cargo check --all-targets`. UC-11 edits one statement and
 proves the other ids, texts and the line above are unchanged; UC-12 inserts by
 anchor and reorders without losing the id; the split-policy test sees `opaque` in
