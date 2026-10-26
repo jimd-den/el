@@ -105,12 +105,20 @@ fn unbalanced(catalog: &Catalog, out: &mut Vec<Violation>) {
         let open = balance::balanced(&element.head);
         (open != Some(true)).then_some((element.id, "head"))
     });
+    // A block is a parent statement plus its children, and the renderer
+    // closes it — so balance is judged over the subtree, not per statement.
+    // Only roots are checked: a child is covered by its root's subtree, and
+    // a statement whose parent is missing is treated as a root of its own.
     let body = catalog
         .statements
         .iter()
         .filter(|stmt| !opaque_owner(catalog, stmt.owner))
+        .filter(|stmt| {
+            stmt.parent.is_none()
+                || stmt.parent.is_some_and(|parent| catalog.find_stmt(parent).is_none())
+        })
         .filter_map(|stmt| {
-            let open = balance::balanced(&stmt.text);
+            let open = balance::balanced(&subtree_text(catalog, stmt));
             (open != Some(true)).then_some((stmt.id, "text"))
         });
 
@@ -121,6 +129,22 @@ fn unbalanced(catalog: &Catalog, out: &mut Vec<Violation>) {
             format!("the {part} opens a delimiter it never closes"),
         ));
     }
+}
+
+/// The text the renderer will write for a statement's subtree: the statement,
+/// its children in source order, and the `}` the renderer emits after a block
+/// opener's children. A childless opener gets no closer, so it is still
+/// refused — the grammar likewise refuses a block that never gains a body.
+fn subtree_text(catalog: &Catalog, stmt: &crate::core::model::stmt::Stmt) -> String {
+    let mut text = stmt.text.clone();
+    let children = catalog.children_of(stmt.id);
+    for child in &children {
+        text.push_str(&subtree_text(catalog, child));
+    }
+    if !children.is_empty() && stmt.text.trim_end().ends_with('{') {
+        text.push('}');
+    }
+    text
 }
 
 fn opaque_owner(catalog: &Catalog, owner: crate::core::model::id::ElId) -> bool {

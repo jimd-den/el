@@ -18,3 +18,4 @@ mod policy_ceiling_blocks_growth;
 mod edit_replaces_one_statement_only;
 mod render_matches_golden;
 mod split_policy_is_honoured;
+mod real_program_builds_with_blocks_and_modules;

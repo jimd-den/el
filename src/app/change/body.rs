@@ -12,6 +12,24 @@ use crate::core::model::kind::Kind;
 use crate::core::plan::policy::Split;
 use crate::core::text::grammar;
 
+/// The file a module reference names. `catalog`, `src/catalog.rs`,
+/// `core/plan` and `core::plan` all name one file each, because the catalog
+/// stores file paths and the tree derives nodes from them: a bare name stored
+/// verbatim becomes a second identity for the same module — a tree node no
+/// file renders, and a seeded module element whose alias collides with the
+/// one the user just added. Normalizing at the command-line boundary keeps
+/// one module one path. An empty reference is returned unchanged, for the
+/// layers below to refuse as an unknown module rather than inventing one.
+pub fn normalize_module(reference: &str) -> String {
+    let stem = reference.strip_prefix("src/").unwrap_or(reference);
+    let stem = stem.strip_suffix(".rs").unwrap_or(stem);
+    let stem = stem.replace("::", "/");
+    if stem.is_empty() {
+        return reference.to_string();
+    }
+    format!("src/{stem}.rs")
+}
+
 pub fn root_module(env: &Env<'_>) -> String {
     let lib = env.fs.exists("src/lib.rs").unwrap_or(false);
     let main = env.fs.exists("src/main.rs").unwrap_or(false);
@@ -24,7 +42,7 @@ pub fn root_module(env: &Env<'_>) -> String {
 
 pub fn signature(add: &Add) -> String {
     if add.kind == Kind::Module {
-        return format!("mod {}", stem(&add.name));
+        return format!("mod {}", stem(&normalize_module(&add.name)));
     }
     add.signature
         .clone()
@@ -131,5 +149,21 @@ fn read_source(env: &Env<'_>, source: &Source, stdin: &str) -> Result<String, Er
                 })?;
             String::from_utf8(bytes).map_err(|_| error::corrupt(format!("{path} is not UTF-8")))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_spelling_of_a_module_names_its_file() {
+        assert_eq!(normalize_module("catalog"), "src/catalog.rs");
+        assert_eq!(normalize_module("src/catalog.rs"), "src/catalog.rs");
+        assert_eq!(normalize_module("core/plan"), "src/core/plan.rs");
+        assert_eq!(normalize_module("core::plan"), "src/core/plan.rs");
+        assert_eq!(normalize_module("src/main.rs"), "src/main.rs");
+        assert_eq!(normalize_module("main"), "src/main.rs");
+        assert_eq!(normalize_module("src/a/mod.rs"), "src/a/mod.rs");
     }
 }
