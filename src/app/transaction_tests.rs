@@ -39,6 +39,22 @@ fn a_model_violation_writes_nothing() {
 }
 
 #[test]
+fn a_committed_change_messages_how_many_files_it_rewrote() {
+    let memory = Memory::new();
+    let store = Store::new(&memory);
+    seed(&memory, &store, &catalog());
+
+    let report = run(&memory, &store, &Fixed(1), &Lint(true), add());
+
+    assert!(report.error.is_none(), "{:?}", report.error);
+    assert!(
+        report.notes.iter().any(|note| note == "el: rewrote 1 file"),
+        "notes: {:?}",
+        report.notes
+    );
+}
+
+#[test]
 fn a_dry_run_restores_the_tree_and_records_preview() {
     let memory = Memory::new();
     let store = Store::new(&memory);
