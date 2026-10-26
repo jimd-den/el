@@ -7,7 +7,8 @@
 // proved where it happens rather than where it would be reported.
 
 use el::core::model::catalog::Catalog;
-use el::core::model::change::Change;
+use el::core::model::body::{Body, BodyStmt};
+use el::core::model::change::{Anchor, Change};
 use el::core::model::element::{NewElement, Visibility};
 use el::core::model::id::ElId;
 use el::core::model::kind::Kind;
@@ -45,10 +46,7 @@ fn policy() -> Policy {
 }
 
 fn grow() -> Change {
-    Change::AddStmt {
-        owner: ElId(1),
-        text: "third();".to_string(),
-    }
+    Change::AddStmt { owner: ElId(1), body: Body { statements: vec![BodyStmt { text: "third();".to_string(), children: Vec::new() }] }, anchor: Anchor::End }
 }
 
 #[test]

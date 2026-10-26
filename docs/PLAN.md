@@ -23,8 +23,10 @@ State as of 2026-10-26, and the only state a reader may trust: `make check` is g
 M0–M6 are real: the harness bites on planted violations, the model round-trips, the text
 toolkit and renderer are property-tested, `plan` refuses with nothing written, the store
 verifies every read, and UC-1 builds and runs a five-command crate through the real binary.
-M7's read surface (`ls`, `tree`, `show`) is real; its statement editing is not. M8–M12 do
-not exist: their sections are designs, not claims.
+M7 is real: the read surface, statement insert/edit/rm/reorder, anchors, the split
+policy, and comment attachment. M8 is real: history verbs, the attic, per-sequence
+catalog snapshots, diff, and doctor recovery. M9–M12 do not exist: their sections are
+designs, not claims.
 
 The M6 handoff branch was intentionally red for one turn: two files were over the line
 ceiling and three parser tests failed. That is now corrected — `cli::args` and
@@ -45,8 +47,8 @@ implementation is demanded by a test written first.
 | M4 | Plan and L0 | an impossible change is refused with nothing written | ✅ |
 | M5 | The store | every projection is content-addressed and restorable | ✅ |
 | M6 | Transaction and first verbs | **UC-1**: a program built from five commands | ✅ |
-| M7 | Statements and the read surface | **UC-11/UC-12**: one line changes, nothing else moves | ☐ read ✅, statements ☐ |
-| M8 | History verbs | **UC-3**: review and rollback | ☐ stub |
+| M7 | Statements and the read surface | **UC-11/UC-12**: one line changes, nothing else moves | ✅ |
+| M8 | History verbs | **UC-3**: review and rollback | ✅ |
 | M9 | Compiler gate | **UC-2**: told before commit that it would not compile | ☐ stub |
 | M10 | Semantic layer | **UC-9/UC-10**: RA rename, refs, quick fixes | ☐ stub |
 | M11 | Search and doc | **UC-5**: std lookup without leaving the terminal | ☐ stub |
@@ -438,24 +440,35 @@ that no line numbers moved for the statements above. The read half's RED is
 **Done when.** UC-11 and UC-12 pass; `el tree --statements` prints the three-level
 tree; `el ls` and `el show` answer from the catalog without opening a source file.
 
-**Status 2026-10-26: read surface ✅, statement editing ☐.**
+**Status 2026-10-26: ✅ — read surface and statement editing.**
 
 *What landed.* `el ls [--module] [--kind] [--opaque]`, `el tree [--statements]`,
-and `el show <id> [--statements] [--source] [--history]`, human and `--json`
+and `el show <id> [--statements] [--source] [--history]`, human and `--json`; statement
+ids work in `ls --kind stmt` and `show` too
 through the existing envelope's `data` field. `show` is id-only: an alias is
 `notfound.element` and exit 6, the same refusal `edit` gives. Ordering is the
 renderer's. Read verbs recover an interrupted transaction like `log`; they do not
 refuse drift, because they answer from the catalog (ADR-0020).
 
-*Evidence.* `make check` green: 333 unit + 37 acceptance + 16 integration tests,
+*Evidence.* `make check` green: 339 unit + 50 acceptance + 16 integration tests,
 clippy `-D warnings`, `cargo check --all-targets`. The acceptance tests build a
 crate through the real binary, then prove `tree` contains every element id and
 `show --source` contains a full body without reading a `.rs` file. The golden
 `tree` (with and without `--statements`) and the `ls`/`show` field tests are in
 `app::inspect::{tests,show_tests}`.
 
-*Still M7.* Statement add-by-anchor, statement edit, and reorder; the read surface
-does not edit, and this branch does not claim UC-11/UC-12.
+*Statement editing.* `el add stmt`, `el edit <stmt> --body`, `el rm <stmt>`, and
+`el mv <stmt> --after <stmt>` work on one statement, keep every id, and renumber
+siblings `0..n`. `split = auto|always|never` is policy: `never` keeps a body opaque,
+`always` refuses an unprovable split, `auto` falls back to opaque. Leading comments
+and attributes attach to the statement that follows them. `model.bad_stmt` refuses
+a body that would become several statements. See ADR-0021.
+
+*Evidence.* `make check` green: 339 unit + 50 acceptance + 16 integration tests,
+clippy `-D warnings`, `cargo check --all-targets`. UC-11 edits one statement and
+proves the other ids, texts and the line above are unchanged; UC-12 inserts by
+anchor and reorders without losing the id; the split-policy test sees `opaque` in
+`show` and the `always`/`auto` difference.
 
 ---
 
@@ -474,6 +487,28 @@ file at seq 41, make three changes, `el undo 3`, assert byte equality including 
 | `doctor --rebuild` | catalog regenerated from journal equals on-disk bytes (FR-34) |
 
 **Done when.** UC-3 passes; `doctor --repair` recovers a SIGKILLed transaction.
+
+**Status 2026-10-26: ✅.**
+
+*What landed.* `undo [<n>]`, `redo`, `revert <seq>`, `diff [<a>] [<b>]`, `log --attic`,
+and `doctor --repair|--rebuild`. Every committed sequence now has a catalog snapshot
+under `.el/catalogs/<seq>`; undo/redo install it, revert copies it into a new entry,
+and rebuild restores the head's cache byte for byte. A mutation after undo moves the
+future to `.el/attic/`; `redo` then disappears, and `log --attic` still reads the old
+entries. Diff compares older → newer and names the statement id when both snapshots
+exist, falling back to a file line diff otherwise.
+
+*Evidence.* `make check` green: 339 unit + 50 acceptance + 16 integration tests,
+clippy `-D warnings`, `cargo check --all-targets`. UC-3 captures every owned file,
+deletes `src/tmp.rs` through two mutations, undoes four, and compares bytes; redo
+restores the same bytes. Revert's new entry carries the target's `to` digest. Diff
+names the edited statement. Rebuild restores a corrupted `.el/catalog` from its
+snapshot. Repair is tested with an inflight marker and a half-written file, the state
+a SIGKILL leaves.
+
+*Boundary.* A pre-M8 store has no old catalog snapshots; undo to such a sequence is
+`env.corrupt` rather than a guessed catalog. `log` still lists journal entries ahead
+of `head` until a new mutation moves them, so `head` is the authority. See ADR-0022.
 
 ---
 

@@ -99,3 +99,42 @@ pub fn element_ids(hello: &Path) -> Vec<String> {
         .filter_map(|(_, rest)| rest.split_once('\t').map(|(id, _)| id.to_string()))
         .collect()
 }
+
+/// Every owned file's bytes, for a byte-for-byte restore comparison. `.el` is
+/// deliberately excluded: it is history, not the projection.
+pub fn files(hello: &Path) -> std::collections::BTreeMap<String, Vec<u8>> {
+    let mut out = std::collections::BTreeMap::new();
+    walk(&hello.join("src"), "src", &mut out);
+    if let Ok(bytes) = fs::read(hello.join("Cargo.toml")) {
+        out.insert("Cargo.toml".to_string(), bytes);
+    }
+    out
+}
+
+fn walk(base: &Path, prefix: &str, out: &mut std::collections::BTreeMap<String, Vec<u8>>) {
+    let Ok(entries) = fs::read_dir(base) else { return };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let key = format!("{prefix}/{name}");
+        if path.is_dir() {
+            walk(&path, &key, out);
+        } else if let Ok(bytes) = fs::read(&path) {
+            out.insert(key, bytes);
+        }
+    }
+}
+
+/// The `data` array from `el log --json`, newest first.
+pub fn log_json(hello: &Path, attic: bool) -> Vec<el::core::text::json::Json> {
+    let args: &[&str] = if attic { &["log", "--attic", "--json"] } else { &["log", "--json"] };
+    let output = el(hello, args);
+    ok(&output, "el log --json");
+    let line = String::from_utf8_lossy(&output.stdout);
+    el::core::text::json::parse(line.trim())
+        .expect("our JSON parses")
+        .get("data")
+        .and_then(|v| v.as_array())
+        .expect("log data")
+        .to_vec()
+}

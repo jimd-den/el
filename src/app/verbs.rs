@@ -3,21 +3,31 @@
 // journal's `op`, `target` and message are, because that is what a human reads
 // back six months later.
 
-use super::change;
+use super::{change, load};
 use super::report::Report;
 use super::transaction::Mutation;
 use super::Env;
 use crate::cli::request::{Add, Edit, Globals, Mv};
 use crate::core::history::entry::Op;
 
+mod diff;
+mod doctor;
+mod history;
 mod inspect;
 mod read;
 
+pub use diff::diff;
+pub use doctor::doctor;
+pub use history::{redo, revert, undo};
 pub use inspect::{ls, show, tree};
 pub use read::{log, run, version};
 
 pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
-    let change = match change::add(env, add.clone(), stdin) {
+    let split = match load::policy(env) {
+        Ok(policy) => policy.split,
+        Err(error) => return Report::fail("add", error),
+    };
+    let change = match change::add(env, add.clone(), stdin, split) {
         Ok(change) => change,
         Err(error) => return Report::fail("add", error),
     };
@@ -37,7 +47,11 @@ pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
 }
 
 pub fn edit(env: &Env<'_>, globals: &Globals, edit: Edit, stdin: &str) -> Report {
-    let change = match change::edit(env, edit.clone(), stdin) {
+    let split = match load::policy(env) {
+        Ok(policy) => policy.split,
+        Err(error) => return Report::fail("edit", error),
+    };
+    let change = match change::edit(env, edit.clone(), stdin, split) {
         Ok(change) => change,
         Err(error) => return Report::fail("edit", error),
     };

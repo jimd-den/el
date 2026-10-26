@@ -16,6 +16,9 @@ pub struct Filter {
 }
 
 pub fn ls(catalog: &crate::core::model::catalog::Catalog, projection: &Projection, filter: &Filter) -> View {
+    if filter.kind == Some(Kind::Stmt) {
+        return statements(catalog, projection, filter);
+    }
     let mut elements: Vec<&Element> = catalog
         .elements
         .iter()
@@ -54,6 +57,59 @@ pub fn ls(catalog: &crate::core::model::catalog::Catalog, projection: &Projectio
     View {
         lines,
         payload: Json::Array(rows),
+    }
+}
+
+fn statements(
+    catalog: &crate::core::model::catalog::Catalog,
+    projection: &Projection,
+    filter: &Filter,
+) -> View {
+    let mut rows: Vec<(&crate::core::model::stmt::Stmt, &Element)> = catalog
+        .statements
+        .iter()
+        .filter_map(|stmt| catalog.find(stmt.owner).map(|owner| (stmt, owner)))
+        .filter(|(_, owner)| {
+            filter
+                .module
+                .as_deref()
+                .is_none_or(|module| module_matches(&owner.module, module))
+        })
+        .filter(|(_, owner)| !filter.opaque || owner.mode == BodyMode::Opaque)
+        .collect();
+    rows.sort_by(|(left, lo), (right, ro)| (&lo.module, left.id).cmp(&(&ro.module, right.id)));
+    let mut lines = vec![format!(
+        "{:<9} {:<6} {:<28} {:<22} {:>5}  {}",
+        "id", "kind", "alias", "module", "lines", "mode"
+    )];
+    let mut out = Vec::new();
+    for (stmt, owner) in rows {
+        let count = projection
+            .spans
+            .iter()
+            .find(|span| span.element == stmt.id)
+            .map(|span| span.last - span.first + 1);
+        lines.push(format!(
+            "{:<9} {:<6} {:<28} {:<22} {:>5}  {}",
+            stmt.id,
+            "stmt",
+            "-",
+            owner.module,
+            count.map_or("-".to_string(), |n| n.to_string()),
+            owner.mode.as_str()
+        ));
+        out.push(Json::Object(vec![
+            ("id".to_string(), Json::Str(stmt.id.to_string())),
+            ("kind".to_string(), Json::Str("stmt".to_string())),
+            ("alias".to_string(), Json::Null),
+            ("module".to_string(), Json::Str(owner.module.clone())),
+            ("lines".to_string(), count.map_or(Json::Null, |n| Json::Number(n.to_string()))),
+            ("mode".to_string(), Json::Str(owner.mode.as_str().to_string())),
+        ]));
+    }
+    View {
+        lines,
+        payload: Json::Array(out),
     }
 }
 

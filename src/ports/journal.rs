@@ -51,6 +51,13 @@ pub trait Journal {
 
     fn catalog(&self) -> Result<Option<String>, Error>;
     fn set_catalog(&self, text: &str) -> Result<(), Error>;
+    fn put_catalog(&self, seq: u64, text: &str) -> Result<(), Error>;
+    fn catalog_at(&self, seq: u64) -> Result<Option<String>, Error>;
+
+    /// Entries whose future was deselected by undo and a later mutation.
+    fn attic_entries(&self) -> Result<Vec<Entry>, Error>;
+    /// Move every journal entry after `head` into `attic/`.
+    fn truncate_future(&self, head: u64) -> Result<(), Error>;
     fn version(&self) -> Result<Option<String>, Error>;
     fn stamp_version(&self) -> Result<(), Error>;
 

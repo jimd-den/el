@@ -65,6 +65,22 @@ impl Journal for Store<'_> {
         Store::set_catalog(self, text).map_err(port)
     }
 
+    fn put_catalog(&self, seq: u64, text: &str) -> Result<(), journal::Error> {
+        Store::put_catalog(self, seq, text).map_err(port)
+    }
+
+    fn catalog_at(&self, seq: u64) -> Result<Option<String>, journal::Error> {
+        Store::catalog_at(self, seq).map_err(port)
+    }
+
+    fn attic_entries(&self) -> Result<Vec<Entry>, journal::Error> {
+        Store::attic_entries(self).map_err(port)
+    }
+
+    fn truncate_future(&self, head: u64) -> Result<(), journal::Error> {
+        Store::truncate_future(self, head).map_err(port)
+    }
+
     fn version(&self) -> Result<Option<String>, journal::Error> {
         Store::version(self).map_err(port)
     }

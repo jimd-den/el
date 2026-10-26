@@ -52,24 +52,22 @@ pub fn show(
         Ok(loaded) => loaded,
         Err(error) => return Report::fail("show", error),
     };
-    let Some(element) = catalog.find(id) else {
-        return Report::fail("show", missing(id));
-    };
     let entries = match env.journal.entries() {
         Ok(entries) => entries,
         Err(error) => return Report::fail("show", error::store(error)),
     };
-    let view = inspect::show(
-        &catalog,
-        &projection,
-        &entries,
-        element,
-        &inspect::Options {
-            statements,
-            source,
-            history,
+    let options = inspect::Options {
+        statements,
+        source,
+        history,
+    };
+    let view = match catalog.find(id) {
+        Some(element) => inspect::show(&catalog, &projection, &entries, element, &options),
+        None => match catalog.find_stmt(id) {
+            Some(stmt) => inspect::statement(&catalog, &projection, &entries, stmt, &options),
+            None => return Report::fail("show", missing(id)),
         },
-    );
+    };
     report("show", view, notes)
 }
 

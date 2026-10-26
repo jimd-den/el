@@ -104,19 +104,44 @@ fn fn_budgets(
         // body's, so the body is what is left between them.
         let body = (span.last - span.first + 1) as usize - 2;
         if body > policy.max_fn_lines {
-            out.push(
-                Violation::at(
-                    Code::FnBudget,
-                    element.id,
-                    format!(
-                        "extract a statement; max_fn_lines is {}",
-                        policy.max_fn_lines
-                    ),
-                )
-                .sized(body),
-            );
+            let remedy = match extractable_statements(catalog, projection, element.id) {
+                Some(ids) => format!(
+                    "extract statement {ids}; max_fn_lines is {}",
+                    policy.max_fn_lines
+                ),
+                None => format!("extract a statement; max_fn_lines is {}", policy.max_fn_lines),
+            };
+            out.push(Violation::at(Code::FnBudget, element.id, remedy).sized(body));
         }
     }
+}
+
+/// The two largest statements directly in `owner`'s body, for a budget remedy.
+fn extractable_statements(catalog: &Catalog, projection: &Projection, owner: ElId) -> Option<String> {
+    let mut candidates: Vec<(u32, ElId)> = catalog
+        .statements
+        .iter()
+        .filter(|stmt| stmt.owner == owner)
+        .filter_map(|stmt| {
+            projection
+                .spans
+                .iter()
+                .find(|span| span.element == stmt.id)
+                .map(|span| (span.last - span.first + 1, stmt.id))
+        })
+        .collect();
+    candidates.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+    if candidates.is_empty() {
+        return None;
+    }
+    Some(
+        candidates
+            .iter()
+            .take(2)
+            .map(|(_, id)| id.to_string())
+            .collect::<Vec<_>>()
+            .join(" or "),
+    )
 }
 
 fn preambles(

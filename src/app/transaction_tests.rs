@@ -5,7 +5,8 @@
 
 use super::support::*;
 use crate::app::Exit;
-use crate::core::model::change::Change;
+use crate::core::model::body::{Body, BodyStmt};
+use crate::core::model::change::{Anchor, Change};
 use crate::core::model::id::ElId;
 use crate::ports::fs_fake::Memory;
 use crate::ports::Fs;
@@ -20,7 +21,13 @@ fn a_model_violation_writes_nothing() {
     let mut mutation = add();
     mutation.changes = vec![Change::AddStmt {
         owner: ElId(1),
-        text: "unsafe { poke(); }".to_string(),
+        body: Body {
+            statements: vec![BodyStmt {
+                text: "unsafe { poke(); }".to_string(),
+                children: Vec::new(),
+            }],
+        },
+        anchor: Anchor::End,
     }];
 
     let report = run(&memory, &store, &Fixed(1), &Lint(true), mutation);

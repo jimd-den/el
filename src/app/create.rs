@@ -16,7 +16,7 @@ use crate::core::history::tree::Tree;
 use crate::core::model::body::{Body, BodyStmt};
 use crate::core::model::catalog::Catalog;
 use crate::core::model::change::Change;
-use crate::core::model::element::Visibility;
+use crate::core::model::element::{BodyMode, Visibility};
 use crate::core::model::kind::Kind;
 
 const POLICY: &str = "ceiling = 200\nmax_fn_lines = 15\nrequire_preamble = true\nforbid = unsafe\ndeps = none\ngate = model\n";
@@ -53,6 +53,7 @@ pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: boo
                 children: Vec::new(),
             }],
         },
+        mode: BodyMode::Split,
     };
     let mut report = super::transaction::apply(
         env,
@@ -92,6 +93,8 @@ fn seed(env: &Env<'_>) -> Result<(), error::Error> {
     };
     env.journal.put_entry(&entry).map_err(error::store)?;
     env.journal.set_head(1).map_err(error::store)?;
-    env.journal.set_catalog(&Catalog::new().encode()).map_err(error::store)?;
+    let catalog = Catalog::new().encode();
+    env.journal.set_catalog(&catalog).map_err(error::store)?;
+    env.journal.put_catalog(1, &catalog).map_err(error::store)?;
     Ok(())
 }

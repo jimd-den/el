@@ -153,3 +153,21 @@ fn tree_payload_round_trips_through_the_project_writer_and_reader() {
 
     assert_eq!(json::parse(&text).expect("parses"), view.payload);
 }
+
+#[test]
+fn ls_kind_stmt_lists_statements_in_module_then_id_order() {
+    let catalog = fixture();
+    let projection = render(&catalog, "demo");
+
+    let view = ls(
+        &catalog,
+        &projection,
+        &Filter { module: None, kind: Some(Kind::Stmt), opaque: false },
+    );
+
+    assert_eq!(
+        ids(&view.payload),
+        ["el-0011", "el-0013", "el-0014", "el-0002", "el-0004", "el-0006", "el-0008", "el-0009"]
+    );
+    assert!(view.lines[1].contains("stmt"));
+}

@@ -71,13 +71,6 @@ fn a_statement_that_cannot_be_a_tail_expression_gains_a_semicolon() {
 }
 
 #[test]
-fn a_comment_or_attribute_statement_gains_no_semicolon() {
-    assert_eq!(texts("///doc\nlet x = 1"), ["///doc", "let x = 1;"]);
-    assert_eq!(texts("// note\na()"), ["// note", "a()"]);
-    assert_eq!(texts("#[cfg(test)]\ntest()"), ["#[cfg(test)]", "test()"]);
-}
-
-#[test]
 fn a_statement_ending_in_a_brace_gains_no_semicolon() {
     assert_eq!(texts("if x { a(); }"), ["if x { a(); }"]);
 }

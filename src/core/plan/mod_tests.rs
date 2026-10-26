@@ -2,10 +2,20 @@
 // refusal, and where purity is proved rather than asserted.
 
 use super::*;
-use crate::core::model::body::Body;
-use crate::core::model::element::Visibility;
+use crate::core::model::body::{Body, BodyStmt};
+use crate::core::model::change::Anchor;
+use crate::core::model::element::{BodyMode, Visibility};
 use crate::core::model::kind::Kind;
 use crate::core::plan::fixture;
+
+fn one(text: &str) -> Body {
+    Body {
+        statements: vec![BodyStmt {
+            text: text.to_string(),
+            children: Vec::new(),
+        }],
+    }
+}
 
 fn ask<'a>(change: &'a Change, policy: &'a policy::Policy) -> Request<'a> {
     Request {
@@ -19,10 +29,7 @@ fn ask<'a>(change: &'a Change, policy: &'a policy::Policy) -> Request<'a> {
 fn a_change_that_passes_returns_a_new_catalog_and_its_projection() {
     let mut catalog = fixture::catalog();
     let run = fixture::function(&mut catalog, "src/a.rs", "fn run()");
-    let change = Change::AddStmt {
-        owner: run,
-        text: "go();".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: one("go();"), anchor: Anchor::End };
 
     let outcome = plan(&catalog, &ask(&change, &fixture::policy())).expect("allowed");
 
@@ -43,10 +50,7 @@ fn the_catalog_you_passed_in_is_not_touched() {
     let mut catalog = fixture::catalog();
     let run = fixture::function(&mut catalog, "src/a.rs", "fn run()");
     let before = catalog.encode();
-    let change = Change::AddStmt {
-        owner: run,
-        text: "go();".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: one("go();"), anchor: Anchor::End };
 
     let _outcome = plan(&catalog, &ask(&change, &fixture::policy())).expect("allowed");
 
@@ -63,10 +67,7 @@ fn a_ceiling_violation_is_refused_and_names_the_size_and_a_seam() {
         ceiling: 4,
         ..fixture::policy()
     };
-    let change = Change::AddStmt {
-        owner: run,
-        text: "c();".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: one("c();"), anchor: Anchor::End };
 
     let refused = plan(&catalog, &ask(&change, &policy)).expect_err("over the ceiling");
 
@@ -84,10 +85,7 @@ fn a_refusal_reports_the_rules_in_cheapness_order() {
         ceiling: 3,
         ..fixture::policy()
     };
-    let change = Change::AddStmt {
-        owner: run,
-        text: "if ready {".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: one("if ready {"), anchor: Anchor::End };
 
     let refused = plan(&catalog, &ask(&change, &policy)).expect_err("two rules");
 
@@ -170,6 +168,7 @@ fn a_new_item_arrives_with_its_kind_its_module_and_its_visibility() {
         signature: "struct Point { x: u8 }".to_string(),
         visibility: Visibility::Pub,
         body: Body::default(),
+        mode: BodyMode::Split,
     };
 
     let outcome = plan(&catalog, &ask(&change, &fixture::policy())).expect("allowed");

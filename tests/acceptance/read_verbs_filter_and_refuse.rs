@@ -53,6 +53,33 @@ fn show_refuses_an_alias_and_an_unknown_id_with_exit_six() {
 }
 
 #[test]
+fn ls_kind_stmt_and_show_a_statement_use_the_statement_id() {
+    let built = program::build("stmt-read");
+    let show = el(&built.hello, &["show", &built.greet, "--json"]);
+    ok(&show, "show greet");
+    let line = String::from_utf8_lossy(&show.stdout);
+    let parsed = el::core::text::json::parse(line.trim()).expect("json");
+    let statements = parsed
+        .get("data")
+        .and_then(|d| d.get("statements"))
+        .and_then(|v| v.as_array())
+        .expect("statements");
+    let statement = statements[0].as_str().expect("id").to_string();
+
+    let ls = el(&built.hello, &["ls", "--kind", "stmt"]);
+    ok(&ls, "ls --kind stmt");
+    assert!(String::from_utf8_lossy(&ls.stdout).contains(&statement));
+
+    let shown = el(&built.hello, &["show", &statement, "--json"]);
+    ok(&shown, "show statement");
+    let line = String::from_utf8_lossy(&shown.stdout);
+    let parsed = el::core::text::json::parse(line.trim()).expect("json");
+    let data = parsed.get("data").expect("data");
+    assert_eq!(data.get("kind").and_then(|v| v.as_str()), Some("stmt"));
+    assert_eq!(data.get("owner").and_then(|v| v.as_str()), Some(built.greet.as_str()));
+}
+
+#[test]
 fn show_json_has_every_documented_field_and_the_source() {
     let built = program::build("show-json");
 

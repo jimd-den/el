@@ -12,9 +12,19 @@
 // caller could break.
 
 use super::body::Body;
-use super::element::Visibility;
+use super::element::{BodyMode, Visibility};
 use super::id::ElId;
 use super::kind::Kind;
+
+/// Where a statement is inserted or moved to, in its owner's body.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Anchor {
+    End,
+    After(ElId),
+    Before(ElId),
+    /// Zero-based position among the siblings.
+    At(usize),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Change {
@@ -27,6 +37,9 @@ pub enum Change {
         /// The body, already parsed by `text::grammar`; `el` supplies the
         /// closing braces and semicolons, so this is a tree, not raw text.
         body: Body,
+        /// `split` for a parsed body, `opaque` when policy says never split or
+        /// the grammar could not prove a boundary (FR-63, FR-72).
+        mode: BodyMode,
     },
     /// Replace any of an item's head, visibility and body; `None` keeps that
     /// field byte for byte (FR-7). A rename is a separate change because it
@@ -36,17 +49,23 @@ pub enum Change {
         head: Option<String>,
         visibility: Option<Visibility>,
         body: Option<Body>,
+        mode: Option<BodyMode>,
     },
     /// Move an item to another module, keeping its id and its body.
     MoveElement { id: ElId, module: String },
     /// Change an item's name. References are rewritten by `plan::refs`.
     Rename { id: ElId, name: String },
-    /// Append a statement to an element's body.
-    AddStmt { owner: ElId, text: String },
-    /// Replace one statement's text.
-    EditStmt { id: ElId, text: String },
-    /// Reorder or re-parent a statement. `to` is an element or a statement; a
-    /// target in another body is refused (`model.cross_body_move`).
+    /// Insert one parsed statement (and its children) at an anchor.
+    AddStmt { owner: ElId, body: Body, anchor: Anchor },
+    /// Replace one statement's text and children, keeping its id.
+    EditStmt { id: ElId, body: Body },
+    /// Replace a body without saying whether the id is an element or a statement;
+    /// the apply layer resolves it against the catalog.
+    EditBody { id: ElId, body: Body, mode: Option<BodyMode> },
+    /// Reorder a statement after another in the same body.
+    ReorderStmt { id: ElId, after: ElId },
+    /// Re-parent a statement. `to` is an element or a statement; a target in
+    /// another body is refused (`model.cross_body_move`).
     MoveStmt { id: ElId, to: ElId },
     /// Remove an element (with its body) or a statement (with its children).
     Remove { id: ElId },

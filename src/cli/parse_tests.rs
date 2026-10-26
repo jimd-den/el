@@ -123,7 +123,7 @@ fn edit_reads_a_rename_as_one_value() {
 
 #[test]
 fn log_reads_a_count() {
-    let Command::Log { count } = parsed("log -n 5").command else {
+    let Command::Log { count, .. } = parsed("log -n 5").command else {
         panic!("not a log");
     };
 

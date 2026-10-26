@@ -105,7 +105,9 @@ as documented in ADR-0019.
 writes one generated comment, because `require_preamble = true` would otherwise refuse the
 module it just created.
 
-`add` prints the new id on stdout (`FR-6`). `edit` prints the ids it changed. `rm` prints
+`--at <n>` is zero-based among the current siblings. `add stmt` takes exactly one
+anchor; `mv <stmt> --after <stmt>` reorders inside one body and refuses a cross-body
+anchor. `add` prints the new id on stdout (`FR-6`). `edit` prints the ids it changed. `rm` prints
 the ids it removed **and every remaining reference** (`FR-9`); dangling references are an
 L0 violation unless `--cascade`, which removes them in the same transaction.
 
@@ -140,7 +142,7 @@ el catalog [--json]
 |---|---|
 | `ls` | What elements exist, with id, kind, alias, module, line count, body mode |
 | `tree` | The three-level outline: crate → modules → items → statements |
-| `show` | Everything about one element: id, alias, visibility, signature, doc, body mode, statement ids, owning sequence |
+| `show` | Everything about one element: id, alias, visibility, signature, doc, body mode, statement ids, owning sequence. A statement id shows its owner, parent, index and text instead. |
 | `explain` | Why it exists: module preamble, doc text, RA hover when available (`FR-55`), callers, tests that name it, last 5 history entries |
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |
@@ -272,6 +274,22 @@ show  data = {id, kind, alias|null, module, visibility, signature, doc|null,
 `--statements`. `source` appears only with `--source`; `history` only with
 `--history`. `ls` orders by module path, then id; `tree` walks the renderer's
 module tree; both are the order the files are written in.
+
+---
+
+### 5.2 History payloads
+
+```text
+log    data = [{seq, ts, actor, op, target, from, to, gate, msg}]
+diff   data = {from, to, elements?: [{op, id, kind|owner, alias?, lines: [
+               {op, text}]}], files: [{path, lines: [{op, text}]}]}
+undo/redo/revert  data = the new or restored entry
+```
+
+`from` and `to` are content digests. `diff` compares the older sequence to the
+newer: no arguments is parent → head, one argument is that sequence → head, two
+are `a → b`. `elements` is present only when both sequences have a catalog
+snapshot; `files` is always present.
 
 ---
 

@@ -114,6 +114,42 @@ const TAIL_FORBIDDEN: &[&str] = &[
     "let", "use", "const", "static", "type", "return", "break", "continue",
 ];
 
+/// Attach leading comments/attributes to the statement they decorate, recursively.
+/// A trailing run with nothing after it stays a statement: an orphan comment is
+/// better than silently dropping it (FR-70).
+pub(super) fn attach_leading(siblings: Vec<BodyStmt>) -> Vec<BodyStmt> {
+    let mut out = Vec::new();
+    let mut pending: Vec<String> = Vec::new();
+
+    for mut stmt in siblings {
+        if is_comment_or_attribute(&stmt.text) {
+            pending.push(stmt.text);
+            continue;
+        }
+        if !pending.is_empty() {
+            stmt.text = format!("{}\n{}", pending.join("\n"), stmt.text);
+            pending.clear();
+        }
+        stmt.children = attach_leading(stmt.children);
+        out.push(stmt);
+    }
+    for text in pending {
+        out.push(BodyStmt {
+            text,
+            children: Vec::new(),
+        });
+    }
+    out
+}
+
+fn is_comment_or_attribute(text: &str) -> bool {
+    let text = text.trim_start();
+    text.starts_with("//")
+        || text.starts_with("/*")
+        || text.starts_with("#[")
+        || text.starts_with("#!")
+}
+
 /// Apply the semicolon policy to one sibling list.
 pub(super) fn with_semicolons(mut siblings: Vec<BodyStmt>) -> Vec<BodyStmt> {
     let last = siblings.len().saturating_sub(1);

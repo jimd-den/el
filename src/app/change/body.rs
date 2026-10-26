@@ -7,7 +7,9 @@ use super::super::{error, Env};
 use super::super::report::Error;
 use crate::cli::request::{Add, Source};
 use crate::core::model::body::{Body, BodyStmt};
+use crate::core::model::element::BodyMode;
 use crate::core::model::kind::Kind;
+use crate::core::plan::policy::Split;
 use crate::core::text::grammar;
 
 pub fn root_module(env: &Env<'_>) -> String {
@@ -51,6 +53,8 @@ pub fn preamble(env: &Env<'_>, add: &Add, stdin: &str) -> Result<Body, Error> {
     })
 }
 
+/// A body for a statement verb: always split, because a statement is the unit
+/// being addressed.
 pub fn body(
     env: &Env<'_>,
     source: Option<&Source>,
@@ -66,6 +70,49 @@ pub fn body(
             }],
         }),
         None => Ok(Body::default()),
+    }
+}
+
+/// A body for an element, with the policy's split mode. `never` stores one
+/// opaque blob; `auto` falls back to opaque when the grammar cannot prove a
+/// boundary; `always` refuses instead of falling back.
+pub fn element_body(
+    env: &Env<'_>,
+    source: Option<&Source>,
+    stdin: &str,
+    needs_body: bool,
+    split: Split,
+) -> Result<(Body, BodyMode), Error> {
+    let Some(source) = source else {
+        let body = if needs_body {
+            Body {
+                statements: vec![BodyStmt {
+                    text: "todo!()".to_string(),
+                    children: Vec::new(),
+                }],
+            }
+        } else {
+            Body::default()
+        };
+        return Ok((body, BodyMode::Split));
+    };
+    let text = read_source(env, source, stdin)?;
+    match split {
+        Split::Never => Ok((opaque(&text), BodyMode::Opaque)),
+        Split::Always => Ok((grammar::parse(&text).map_err(error::bad_body)?, BodyMode::Split)),
+        Split::Auto => match grammar::parse(&text) {
+            Ok(body) => Ok((body, BodyMode::Split)),
+            Err(_) => Ok((opaque(&text), BodyMode::Opaque)),
+        },
+    }
+}
+
+fn opaque(text: &str) -> Body {
+    Body {
+        statements: vec![BodyStmt {
+            text: text.trim_end().to_string(),
+            children: Vec::new(),
+        }],
     }
 }
 

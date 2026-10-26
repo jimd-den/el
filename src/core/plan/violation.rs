@@ -11,7 +11,7 @@ use crate::core::model::id::ElId;
 use std::fmt;
 
 /// Every L0 rule, one code each. `ALL` is exhaustive by the test below.
-pub const ALL: [Code; 11] = [
+pub const ALL: [Code; 12] = [
     Code::DuplicateAlias,
     Code::UnknownRef,
     Code::CrossBodyMove,
@@ -23,6 +23,7 @@ pub const ALL: [Code; 11] = [
     Code::Forbidden,
     Code::DepDenied,
     Code::DanglingRef,
+    Code::BadStmt,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -38,6 +39,7 @@ pub enum Code {
     Forbidden,
     DepDenied,
     DanglingRef,
+    BadStmt,
 }
 
 impl Code {
@@ -59,6 +61,7 @@ impl Code {
             Code::Forbidden => "model.forbidden",
             Code::DepDenied => "model.dep_denied",
             Code::DanglingRef => "model.dangling_ref",
+            Code::BadStmt => "model.bad_stmt",
         }
     }
 }

@@ -14,6 +14,9 @@ use crate::core::text::json::Json;
 
 mod context;
 mod detail;
+mod statement;
+
+pub use statement::statement;
 
 pub struct Options {
     pub statements: bool,
@@ -119,4 +122,3 @@ pub fn show(
         payload: Json::Object(fields),
     }
 }
-

@@ -92,3 +92,12 @@ fn an_unknown_gate_word_names_its_line() {
 fn a_preamble_requirement_can_be_turned_off() {
     assert!(!Policy::parse("require_preamble = false\n").expect("valid").require_preamble);
 }
+
+#[test]
+fn split_modes_parse_and_default_to_auto() {
+    use crate::core::plan::policy::Split;
+
+    assert_eq!(Policy::default().split, Split::Auto);
+    assert_eq!(Policy::parse("split = never").expect("valid").split, Split::Never);
+    assert!(Policy::parse("split = sometimes").is_err());
+}

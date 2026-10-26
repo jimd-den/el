@@ -4,6 +4,7 @@
 
 use super::super::{error, load, projection, Env, Exit, Report};
 use crate::core::history::entry::Entry;
+use crate::core::history::object;
 use crate::core::text::json::Json;
 
 pub fn run(env: &Env<'_>, args: &[String]) -> Report {
@@ -55,21 +56,30 @@ pub fn run(env: &Env<'_>, args: &[String]) -> Report {
     report
 }
 
-pub fn log(env: &Env<'_>, count: Option<usize>) -> Report {
+pub fn log(env: &Env<'_>, count: Option<usize>, attic: bool) -> Report {
     if let Err(error) = load::ensure_crate(env) {
         return Report::fail("log", error);
     }
     if let Err(error) = super::super::transaction::recover(env) {
         return Report::fail("log", error);
     }
-    let entries = match env.journal.entries() {
+    let mut entries = match env.journal.entries() {
         Ok(entries) => entries,
         Err(error) => return Report::fail("log", error::store(error)),
     };
+    if attic {
+        match env.journal.attic_entries() {
+            Ok(entries) => entries,
+            Err(error) => return Report::fail("log", error::store(error)),
+        }
+        .into_iter()
+        .for_each(|entry| entries.push(entry));
+    }
+    entries.sort_by_key(|entry| entry.seq);
     let mut report = Report::new("log");
     let visible: Vec<&Entry> = entries.iter().rev().take(count.unwrap_or(usize::MAX)).collect();
     report.lines = visible.iter().map(|entry| line(entry)).collect();
-    report.payload = Some(Json::Array(visible.iter().map(|entry| json(entry)).collect()));
+    report.payload = Some(Json::Array(visible.iter().map(|entry| entry_payload(entry)).collect()));
     report
 }
 
@@ -84,13 +94,15 @@ fn line(entry: &Entry) -> String {
     )
 }
 
-fn json(entry: &Entry) -> Json {
+pub(super) fn entry_payload(entry: &Entry) -> Json {
     Json::Object(vec![
         ("seq".to_string(), Json::Number(entry.seq.to_string())),
         ("ts".to_string(), Json::Number(entry.ts.to_string())),
         ("actor".to_string(), Json::Str(entry.actor.clone())),
         ("op".to_string(), Json::Str(entry.op.as_str().to_string())),
         ("target".to_string(), Json::Str(entry.target.clone())),
+        ("from".to_string(), Json::Str(object::show(&entry.from))),
+        ("to".to_string(), Json::Str(object::show(&entry.to))),
         ("gate".to_string(), Json::Str(entry.gate.clone())),
         ("msg".to_string(), Json::Str(entry.msg.clone())),
     ])

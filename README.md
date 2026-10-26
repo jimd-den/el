@@ -14,12 +14,13 @@ hello
 $ el undo && el log
 ```
 
-**Design status: M6 plus M7's read surface.** `el new`, `add`, `edit`, `rm`, `mv`,
-`run`, `log`, `ls`, `tree` and `show` work in a real crate, with the lock, inflight
+**Design status: M8.** `el new`, `add`, `edit`, `rm`, `mv`,
+`run`, `log`, `diff`, `undo`, `redo`, `revert`, `doctor`, `ls`, `tree`, `show`, statement
+insert/edit/reorder, and the split policy work in a real crate, with the lock, inflight
 recovery, drift detection, a content-addressed store, and a body grammar that supplies
 closing braces and semicolons. The default gate is L0 (`model`); `--strict` adds clippy;
-L1, statement editing and history verbs are M7–M9. `make check` is green. The
-transcript's `el undo` line is still the target, not a claim.
+L1 is M9. `make check` is green. The transcript's gate line is the M9 target; the
+`el undo` line is real.
 
 ---
 
@@ -33,7 +34,7 @@ transcript's `el undo` line is still the target, not a claim.
 | `docs/HISTORY.md` | The catalog, the journal, content-addressed snapshots, undo/redo/revert, crash recovery |
 | `docs/ARCHITECTURE.md` | The clean-architecture layout: layers, the dependency rule, the ~41 files that will exist, and how the boundaries are enforced by tests |
 | `docs/PLAN.md` | Thirteen milestones from an empty directory to a self-hosting tool, with the red test that starts each one, a cut list, and risks |
-| `docs/adr/` | Twenty-one decision records: zero dependencies, catalog-as-truth, stable ids, transactional apply, error delta, history store, network-as-subprocess, hand-rolled parsing, projection ownership, project constants, `rust-analyzer` as an LSP subprocess, statements as elements, the lexical splitter, symbol-tree import, the transaction/journal port, grammar-owned bodies, and the id-only read verbs |
+| `docs/adr/` | Twenty-three decision records: zero dependencies, catalog-as-truth, stable ids, transactional apply, error delta, history store, network-as-subprocess, hand-rolled parsing, projection ownership, project constants, `rust-analyzer` as an LSP subprocess, statements as elements, the lexical splitter, symbol-tree import, the transaction/journal port, grammar-owned bodies, the id-only read verbs, statement editing, and history as head moves |
 | `docs/reports/prior-art.md` | What already exists (cargo-edit, rust-script, ast-grep, rust-analyzer, cargo-nextest, agent-CLI writing), what we take, what we reject |
 
 ---

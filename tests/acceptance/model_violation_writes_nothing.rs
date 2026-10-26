@@ -8,7 +8,8 @@
 // M5's half of this requirement; `docs/PLAN.md` records that they are not here.
 
 use el::core::model::catalog::Catalog;
-use el::core::model::change::Change;
+use el::core::model::body::{Body, BodyStmt};
+use el::core::model::change::{Anchor, Change};
 use el::core::model::element::{NewElement, Visibility};
 use el::core::model::id::ElId;
 use el::core::model::kind::Kind;
@@ -50,10 +51,7 @@ fn policy() -> Policy {
 fn a_refused_change_leaves_the_catalog_exactly_as_it_was() {
     let (catalog, run) = catalog();
     let before = catalog.encode();
-    let change = Change::AddStmt {
-        owner: run,
-        text: "unsafe { poke(); }".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: Body { statements: vec![BodyStmt { text: "unsafe { poke(); }".to_string(), children: Vec::new() }] }, anchor: Anchor::End };
 
     let refused = plan(&catalog, &ask(&change, &policy())).expect_err("forbidden construct");
 
@@ -64,10 +62,7 @@ fn a_refused_change_leaves_the_catalog_exactly_as_it_was() {
 #[test]
 fn a_refusal_names_the_element_it_is_about() {
     let (catalog, run) = catalog();
-    let change = Change::AddStmt {
-        owner: run,
-        text: "unsafe { poke(); }".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: Body { statements: vec![BodyStmt { text: "unsafe { poke(); }".to_string(), children: Vec::new() }] }, anchor: Anchor::End };
 
     let refused = plan(&catalog, &ask(&change, &policy())).expect_err("forbidden construct");
 
@@ -80,10 +75,7 @@ fn a_refusal_names_the_element_it_is_about() {
 #[test]
 fn a_refusal_that_oversteps_a_budget_names_the_computed_size() {
     let (catalog, run) = catalog();
-    let change = Change::AddStmt {
-        owner: run,
-        text: "more();".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: Body { statements: vec![BodyStmt { text: "more();".to_string(), children: Vec::new() }] }, anchor: Anchor::End };
     let allowed = plan(&catalog, &ask(&change, &policy())).expect("fits any ceiling");
     let lines = allowed
         .projection
@@ -106,10 +98,7 @@ fn a_refusal_that_oversteps_a_budget_names_the_computed_size() {
 #[test]
 fn an_allowed_change_still_returns_a_catalog_a_copy_away_from_the_original() {
     let (catalog, run) = catalog();
-    let change = Change::AddStmt {
-        owner: run,
-        text: "more();".to_string(),
-    };
+    let change = Change::AddStmt { owner: run, body: Body { statements: vec![BodyStmt { text: "more();".to_string(), children: Vec::new() }] }, anchor: Anchor::End };
 
     let outcome = plan(&catalog, &ask(&change, &policy())).expect("allowed");
 

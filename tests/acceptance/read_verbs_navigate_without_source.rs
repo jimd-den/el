@@ -81,10 +81,10 @@ fn tree_json_round_trips_through_the_project_reader() {
         .and_then(|v| v.as_array())
         .expect("statements");
     assert!(
-        statements
-            .iter()
-            .any(|statement| statement.get("text").and_then(|v| v.as_str())
-                == Some("format!(\"hello, {name}\")")),
+        statements.iter().any(|statement| statement
+            .get("text")
+            .and_then(|v| v.as_str())
+            .is_some_and(|text| text.contains("format!(\"hello, {name}\")"))),
         "{line}"
     );
 }
