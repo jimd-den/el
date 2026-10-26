@@ -37,7 +37,7 @@ Every line of implementation is demanded by a test written first.
 | M0 | Harness and project constants | `make check` exists and fails loudly on a planted violation | ✅ green, violations proven |
 | M1 | The model | a catalog can be built, addressed and round-tripped | ✅ |
 | M2 | Text toolkit | bodies split losslessly, JSON is read and written | ✅ |
-| M3 | Rendering | a catalog becomes Rust files and a span map | ☐ stub |
+| M3 | Rendering | a catalog becomes Rust files and a span map | ✅ |
 | M4 | Plan and L0 | an impossible change is refused with nothing written | ☐ stub |
 | M5 | The store | every projection is content-addressed and restorable | ☐ stub |
 | M6 | Transaction and first verbs | **UC-1**: a program built from five commands | ☐ stub |
@@ -157,10 +157,42 @@ the same elements in different orders render to identical bytes (FR-13). Then
 `tests/acceptance/every_rendered_module_compiles.rs`: for five catalogs, the rendered crate
 passes `cargo check` (this one is `#[ignore]`-free but lives in `integration/`).
 
-**Files.** `core/render/{rust,body,manifest,spans,style}.rs`.
+**Files.** `core/render/{mod,rust,body,manifest,spans,style,tree}.rs`.
 
 **Done when.** The rendered `src/main.rs` for a two-module catalog is byte-identical to the
 checked-in golden file, and changing one statement changes exactly one line.
+
+**Status 2026-10-25: ✅ — with two corrections the plan did not anticipate.**
+
+*The model had nowhere to put a parameter list.* `COMMANDS.md` offers
+`--sig 'fn run(p: &Plan) -> Verdict'` and `Element` could not hold it, so "rendered files
+compile" would have been a claim about `fn foo() {}`. An element now carries `head` (the text
+after its identifier), which is `21f38fc`, and the catalog's `E` record carries it too
+(ADR-0015 amendment). Text, not a typed signature: `el` remembers characters, the compiler
+judges them (ADR-0008).
+
+*Five catalogs do not compile on their own.* Three real defects came out of the compiler, not
+out of reading the code:
+
+| Symptom | Cause | Rule it produced |
+|---|---|---|
+| `enum Color;` lost its variants | `needs_body()` was the wrong question | `Kind::takes_block()`: brace or semicolon is a separate question from "may own children" |
+| `E0603: module plan is private` | a generated `mod` line hid a `pub fn` | a `mod` line is as visible as the widest thing beneath it (ADR-0016) |
+| a block statement never closed | the model records children, not punctuation | the renderer emits the `}`, because `text::split` already decided where the statement ended |
+
+**What drove what.** `render_matches_golden` and `mod_tree_is_generated` were red first —
+the latter's new case failed with *"root does not re-export core"* before the visibility rule
+existed. `render_is_deterministic` was **green on first run**: the renderer sorted by content
+from the start, so it is a pin, and it was proved by mutation instead of by claim — deleting
+`node.items.sort()` fails two of its cases and `tree_tests::items_are_in_id_order`, which was
+strengthened for exactly that reason. Deleting `spans::Collector::finish`'s sort fails
+`spans_sort_by_path_then_start`; making `opens_block` return `false` fails two body tests and
+the integration crate.
+
+The golden file changed once, and not because the renderer moved: `greet.rs` holds a `pub fn`,
+so its `mod` line had to become `pub mod greet;` or the crate would not compile. A golden
+recorded from output pins bugs; this one was changed because `cargo check` refused the
+alternative, and `tests/fixtures/golden/two_modules/README.md` says so line by line.
 
 ---
 
