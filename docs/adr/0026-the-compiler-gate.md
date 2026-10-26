@@ -76,10 +76,8 @@ measured warm on a 30-module crate, under the 2 s budget); a crate whose
 tests build deliberately uncompilable programs must use `--fast` for those
 steps — four existing acceptance tests were migrated exactly that way,
 and the M6-era log assertion now expects `check` on add entries.
-Known artifact, not a defect: `cargo check --all-targets` flags `fn main`
-as dead code in test-target compilation, so a fresh crate's first gated
-commit reports one dead-code warning; and rustc suppresses lints when
-errors are present, so warning counts flicker when an error appears.
-Only new-error blocking is load-bearing.
+Known behavior, not a defect: warning counts can shift when an error
+appears, since rustc may not run lint passes on a crate that fails to
+compile. Only new-error blocking is load-bearing.
 Revisit if: a real `check` verb lands (it takes over baseline writing and
 reporting); M10 needs semantic diagnostics (L3 reopens tier selection).
