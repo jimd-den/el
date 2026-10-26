@@ -44,4 +44,43 @@ impl Store<'_> {
             Some(text) => Entry::decode(&text).map(Some).map_err(Error::Malformed),
         }
     }
+
+    /// The catalog at one sequence. New stores write it beside the tree; a store
+    /// created before M8 answers `None` and the caller must rebuild or stay at head.
+    pub fn put_catalog(&self, seq: u64, text: &str) -> Result<(), Error> {
+        self.write_text(&Self::at(&format!("catalogs/{seq:06}")), text)
+    }
+
+    pub fn catalog_at(&self, seq: u64) -> Result<Option<String>, Error> {
+        self.text(&Self::at(&format!("catalogs/{seq:06}")))
+    }
+
+    /// Entries moved aside by undo + a new mutation, newest first.
+    pub fn attic_entries(&self) -> Result<Vec<Entry>, Error> {
+        let mut found = Vec::new();
+        for path in self.fs.list(&Self::at("attic"))? {
+            let text = self.text(&path)?.ok_or_else(|| Error::Missing(path.clone()))?;
+            found.push(Entry::decode(&text).map_err(Error::Malformed)?);
+        }
+        found.sort_by_key(|entry| entry.seq);
+        Ok(found)
+    }
+
+    /// Move every journal entry after `head` to `attic/`, preserving its bytes.
+    pub fn truncate_future(&self, head: u64) -> Result<(), Error> {
+        for path in self.fs.list(&Self::at("journal"))? {
+            let seq = path
+                .rsplit('/')
+                .next()
+                .and_then(|name| name.parse::<u64>().ok())
+                .unwrap_or(0);
+            if seq <= head {
+                continue;
+            }
+            let text = self.text(&path)?.ok_or_else(|| Error::Missing(path.clone()))?;
+            self.write_text(&Self::at(&format!("attic/{seq:06}")), &text)?;
+            self.fs.remove(&path)?;
+        }
+        Ok(())
+    }
 }

@@ -154,11 +154,17 @@ fn prepare(env: &super::Env<'_>, mutation: &Mutation, notes: &mut Vec<String>) -
         projection = outcome.projection;
     }
 
+    let seq = if mutation.dry_run {
+        stage::next_free(env, head)?
+    } else {
+        env.journal.truncate_future(head).map_err(error::store)?;
+        head + 1
+    };
     let old_digest = env.journal.put_tree(&old_tree).map_err(error::store)?;
     let new_tree = projection::tree_of(env, &projection)?;
     let new_digest = env.journal.put_tree(&new_tree).map_err(error::store)?;
     Ok(Prepared {
-        seq: head + 1,
+        seq,
         old_tree,
         old_digest,
         new_tree,

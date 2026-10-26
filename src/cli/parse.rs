@@ -41,17 +41,21 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
         },
         "log" => Command::Log {
             count: count(args.value("-n")?.as_deref())?,
+            attic: args.has("--attic"),
         },
         "version" => Command::Version,
         "" => return Err(Usage::new("usage.missing_verb", "el needs a verb")),
         other => match super::parse_read::command(other, &args)? {
             Some(command) => command,
-            None => {
-                return Err(Usage::new(
-                    "usage.unknown_verb",
-                    format!("{other:?} is not a verb; try `el skill`"),
-                ));
-            }
+            None => match super::parse_history::command(other, &args)? {
+                Some(command) => command,
+                None => {
+                    return Err(Usage::new(
+                        "usage.unknown_verb",
+                        format!("{other:?} is not a verb; try `el skill`"),
+                    ));
+                }
+            },
         },
     };
     check_subject(&args, &command)?;
@@ -163,6 +167,9 @@ fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
         Command::Add(_) => 3,
         Command::Edit(_) | Command::Show(_) => 2,
         Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. } => 1,
+        Command::Diff { .. } => 3,
+        Command::Undo { .. } | Command::Revert { .. } => 2,
+        Command::Redo | Command::Doctor { .. } => 1,
         Command::Rm { .. } | Command::Run { .. } | Command::Log { .. } => usize::MAX,
     };
     if args.words.len() > expected {

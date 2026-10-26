@@ -24,8 +24,9 @@ M0–M6 are real: the harness bites on planted violations, the model round-trips
 toolkit and renderer are property-tested, `plan` refuses with nothing written, the store
 verifies every read, and UC-1 builds and runs a five-command crate through the real binary.
 M7 is real: the read surface, statement insert/edit/rm/reorder, anchors, the split
-policy, and comment attachment. M8–M12 do not exist: their sections are designs, not
-claims.
+policy, and comment attachment. M8 is real: history verbs, the attic, per-sequence
+catalog snapshots, diff, and doctor recovery. M9–M12 do not exist: their sections are
+designs, not claims.
 
 The M6 handoff branch was intentionally red for one turn: two files were over the line
 ceiling and three parser tests failed. That is now corrected — `cli::args` and
@@ -47,7 +48,7 @@ implementation is demanded by a test written first.
 | M5 | The store | every projection is content-addressed and restorable | ✅ |
 | M6 | Transaction and first verbs | **UC-1**: a program built from five commands | ✅ |
 | M7 | Statements and the read surface | **UC-11/UC-12**: one line changes, nothing else moves | ✅ |
-| M8 | History verbs | **UC-3**: review and rollback | ☐ stub |
+| M8 | History verbs | **UC-3**: review and rollback | ✅ |
 | M9 | Compiler gate | **UC-2**: told before commit that it would not compile | ☐ stub |
 | M10 | Semantic layer | **UC-9/UC-10**: RA rename, refs, quick fixes | ☐ stub |
 | M11 | Search and doc | **UC-5**: std lookup without leaving the terminal | ☐ stub |
@@ -485,6 +486,28 @@ file at seq 41, make three changes, `el undo 3`, assert byte equality including 
 | `doctor --rebuild` | catalog regenerated from journal equals on-disk bytes (FR-34) |
 
 **Done when.** UC-3 passes; `doctor --repair` recovers a SIGKILLed transaction.
+
+**Status 2026-10-26: ✅.**
+
+*What landed.* `undo [<n>]`, `redo`, `revert <seq>`, `diff [<a>] [<b>]`, `log --attic`,
+and `doctor --repair|--rebuild`. Every committed sequence now has a catalog snapshot
+under `.el/catalogs/<seq>`; undo/redo install it, revert copies it into a new entry,
+and rebuild restores the head's cache byte for byte. A mutation after undo moves the
+future to `.el/attic/`; `redo` then disappears, and `log --attic` still reads the old
+entries. Diff compares older → newer and names the statement id when both snapshots
+exist, falling back to a file line diff otherwise.
+
+*Evidence.* `make check` green: 337 unit + 49 acceptance + 16 integration tests,
+clippy `-D warnings`, `cargo check --all-targets`. UC-3 captures every owned file,
+deletes `src/tmp.rs` through two mutations, undoes four, and compares bytes; redo
+restores the same bytes. Revert's new entry carries the target's `to` digest. Diff
+names the edited statement. Rebuild restores a corrupted `.el/catalog` from its
+snapshot. Repair is tested with an inflight marker and a half-written file, the state
+a SIGKILL leaves.
+
+*Boundary.* A pre-M8 store has no old catalog snapshots; undo to such a sequence is
+`env.corrupt` rather than a guessed catalog. `log` still lists journal entries ahead
+of `head` until a new mutation moves them, so `head` is the authority. See ADR-0022.
 
 ---
 

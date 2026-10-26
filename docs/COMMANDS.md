@@ -277,6 +277,22 @@ module tree; both are the order the files are written in.
 
 ---
 
+### 5.2 History payloads
+
+```text
+log    data = [{seq, ts, actor, op, target, from, to, gate, msg}]
+diff   data = {from, to, elements?: [{op, id, kind|owner, alias?, lines: [
+               {op, text}]}], files: [{path, lines: [{op, text}]}]}
+undo/redo/revert  data = the new or restored entry
+```
+
+`from` and `to` are content digests. `diff` compares the older sequence to the
+newer: no arguments is parent → head, one argument is that sequence → head, two
+are `a → b`. `elements` is present only when both sequences have a catalog
+snapshot; `files` is always present.
+
+---
+
 ## 6. Output conventions
 
 - Ids are printed raw (`el-0007`), so `$(el add fn …)` composes.

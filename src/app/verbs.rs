@@ -10,9 +10,15 @@ use super::Env;
 use crate::cli::request::{Add, Edit, Globals, Mv};
 use crate::core::history::entry::Op;
 
+mod diff;
+mod doctor;
+mod history;
 mod inspect;
 mod read;
 
+pub use diff::diff;
+pub use doctor::doctor;
+pub use history::{redo, revert, undo};
 pub use inspect::{ls, show, tree};
 pub use read::{log, run, version};
 

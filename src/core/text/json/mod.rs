@@ -46,6 +46,13 @@ impl Json {
         }
     }
 
+    pub fn as_number(&self) -> Option<u64> {
+        match self {
+            Json::Number(text) => text.parse().ok(),
+            _ => None,
+        }
+    }
+
     pub fn as_array(&self) -> Option<&[Json]> {
         match self {
             Json::Array(items) => Some(items),

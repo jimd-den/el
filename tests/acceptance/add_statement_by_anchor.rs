@@ -57,6 +57,10 @@ fn a_statement_inserts_after_its_anchor_and_reorders_without_losing_its_id() {
     ok(&reorder, "reorder");
     let after = ids(&show(&built.hello, &demo));
     assert_eq!(after, vec![before[0].clone(), before[1].clone(), inserted.clone()]);
+
+    ok(&el(&built.hello, &["rm", &inserted]), "rm inserted");
+    let after = ids(&show(&built.hello, &demo));
+    assert_eq!(after, before);
 }
 
 #[test]

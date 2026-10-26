@@ -13,6 +13,7 @@
 
 pub mod args;
 pub mod parse;
+mod parse_history;
 mod parse_read;
 pub mod request;
 

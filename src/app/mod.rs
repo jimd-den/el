@@ -71,7 +71,12 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
         }
         Command::Mv(mv) => verbs::move_(env, &parsed.globals, mv.clone()),
         Command::Run { args } => verbs::run(env, args),
-        Command::Log { count } => verbs::log(env, *count),
+        Command::Log { count, attic } => verbs::log(env, *count, *attic),
+        Command::Diff { a, b } => verbs::diff(env, *a, *b),
+        Command::Undo { n } => verbs::undo(env, *n),
+        Command::Redo => verbs::redo(env),
+        Command::Revert { seq } => verbs::revert(env, *seq),
+        Command::Doctor { repair, rebuild } => verbs::doctor(env, *repair, *rebuild),
         Command::Ls(ls) => verbs::ls(env, ls.module.as_deref(), ls.kind, ls.opaque),
         Command::Tree(tree) => verbs::tree(env, tree.statements),
         Command::Show(show) => {
