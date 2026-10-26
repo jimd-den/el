@@ -105,7 +105,9 @@ as documented in ADR-0019.
 writes one generated comment, because `require_preamble = true` would otherwise refuse the
 module it just created.
 
-`add` prints the new id on stdout (`FR-6`). `edit` prints the ids it changed. `rm` prints
+`--at <n>` is zero-based among the current siblings. `add stmt` takes exactly one
+anchor; `mv <stmt> --after <stmt>` reorders inside one body and refuses a cross-body
+anchor. `add` prints the new id on stdout (`FR-6`). `edit` prints the ids it changed. `rm` prints
 the ids it removed **and every remaining reference** (`FR-9`); dangling references are an
 L0 violation unless `--cascade`, which removes them in the same transaction.
 

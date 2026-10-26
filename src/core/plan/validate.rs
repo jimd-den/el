@@ -13,6 +13,7 @@
 // the projection, which is exactly what would be written.
 
 use crate::core::model::catalog::Catalog;
+use crate::core::model::element::BodyMode;
 use crate::core::plan::policy::Policy;
 use crate::core::plan::violation::{Code, Violation};
 use crate::core::plan::rendered;
@@ -104,10 +105,14 @@ fn unbalanced(catalog: &Catalog, out: &mut Vec<Violation>) {
         let open = balance::balanced(&element.head);
         (open != Some(true)).then_some((element.id, "head"))
     });
-    let body = catalog.statements.iter().filter_map(|stmt| {
-        let open = balance::balanced(&stmt.text);
-        (open != Some(true)).then_some((stmt.id, "text"))
-    });
+    let body = catalog
+        .statements
+        .iter()
+        .filter(|stmt| !opaque_owner(catalog, stmt.owner))
+        .filter_map(|stmt| {
+            let open = balance::balanced(&stmt.text);
+            (open != Some(true)).then_some((stmt.id, "text"))
+        });
 
     for (id, part) in head.chain(body) {
         out.push(Violation::at(
@@ -116,6 +121,12 @@ fn unbalanced(catalog: &Catalog, out: &mut Vec<Violation>) {
             format!("the {part} opens a delimiter it never closes"),
         ));
     }
+}
+
+fn opaque_owner(catalog: &Catalog, owner: crate::core::model::id::ElId) -> bool {
+    catalog
+        .find(owner)
+        .is_some_and(|element| element.mode == BodyMode::Opaque)
 }
 
 fn bad_idents(catalog: &Catalog, out: &mut Vec<Violation>) {

@@ -10,7 +10,7 @@ use crate::core::history::tree::Tree;
 use crate::core::model::body::Body;
 use crate::core::model::catalog::Catalog;
 use crate::core::model::change::Change;
-use crate::core::model::element::{NewElement, Visibility};
+use crate::core::model::element::{BodyMode, NewElement, Visibility};
 use crate::core::model::kind::Kind;
 use crate::core::render::render;
 use crate::adapters::store::Store;
@@ -98,6 +98,7 @@ pub(super) fn add() -> Mutation {
             signature: "fn added()".to_string(),
             visibility: Visibility::Private,
             body: Body::default(),
+        mode: BodyMode::Split,
         }],
         dry_run: false,
         strict: false,

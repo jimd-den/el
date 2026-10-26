@@ -90,7 +90,7 @@ pub fn parse(body: &str) -> Result<Body, Error> {
         builder.add(repair(&buffer, start)?);
     }
     Ok(Body {
-        statements: builder.finish(),
+        statements: line::attach_leading(builder.finish()),
     })
 }
 
@@ -139,9 +139,14 @@ impl Builder {
     }
 }
 
+
 #[cfg(test)]
 #[path = "grammar_tests.rs"]
 mod grammar_tests;
+
+#[cfg(test)]
+#[path = "grammar_comment_tests.rs"]
+mod grammar_comment_tests;
 
 #[cfg(test)]
 #[path = "grammar_multiline_tests.rs"]

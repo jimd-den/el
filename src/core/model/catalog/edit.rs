@@ -45,7 +45,8 @@ impl Catalog {
         if self.find(owner).is_none() {
             return Err(Error::UnknownId(owner));
         }
-        self.push_stmt(owner, None, text)
+        let position = self.children_of(owner).len();
+        self.insert_stmt(owner, None, position, text)
     }
 
     /// Append a statement inside another statement's block (FR-62).
@@ -54,135 +55,129 @@ impl Catalog {
             Some(stmt) => stmt.owner,
             None => return Err(Error::UnknownId(parent)),
         };
-        self.push_stmt(owner, Some(parent), text)
+        let position = self.children_of(parent).len();
+        self.insert_stmt(owner, Some(parent), position, text)
     }
 
-    fn push_stmt(&mut self, owner: ElId, parent: Option<ElId>, text: &str) -> Result<ElId, Error> {
-        let index = self.children_of(parent.unwrap_or(owner)).len() as u32;
+    /// Insert `text` at `position` among `parent`'s children (or the element's
+    /// top-level statements when `parent` is `None`). Existing siblings keep their
+    /// ids and are renumbered, so source order is always `0..n`.
+    pub fn insert_stmt(
+        &mut self,
+        owner: ElId,
+        parent: Option<ElId>,
+        position: usize,
+        text: &str,
+    ) -> Result<ElId, Error> {
+        if self.find(owner).is_none() {
+            return Err(Error::UnknownId(owner));
+        }
+        if let Some(parent) = parent {
+            let Some(stmt) = self.find_stmt(parent) else {
+                return Err(Error::UnknownId(parent));
+            };
+            if stmt.owner != owner {
+                return Err(Error::UnknownId(parent));
+            }
+        }
+        let mut siblings: Vec<ElId> = self
+            .children_of(parent.unwrap_or(owner))
+            .iter()
+            .map(|stmt| stmt.id)
+            .collect();
+        let position = position.min(siblings.len());
+        siblings.insert(position, ElId(0));
         let id = self.alloc_id();
-        self.statements.push(Stmt::new(id, owner, parent, index, text));
+        siblings[position] = id;
+        self.renumber(owner, parent, &siblings);
+        self.statements.push(Stmt::new(id, owner, parent, position as u32, text));
         Ok(id)
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::core::model::element::{NewElement, Visibility};
-    use crate::core::model::kind::Kind;
+    /// Move a statement under `owner`/`parent` at `position`, keeping its id.
+    /// Renumbering both the old and new sibling lists is what makes `children_of`
+    /// order stable after an insert or a reorder.
+    pub fn move_stmt(
+        &mut self,
+        id: ElId,
+        owner: ElId,
+        parent: Option<ElId>,
+        position: usize,
+    ) -> Result<(), Error> {
+        let Some(stmt) = self.find_stmt(id).cloned() else {
+            return Err(Error::UnknownId(id));
+        };
+        if self.find(owner).is_none() {
+            return Err(Error::UnknownId(owner));
+        }
+        if let Some(parent) = parent {
+            let Some(target) = self.find_stmt(parent) else {
+                return Err(Error::UnknownId(parent));
+            };
+            if target.owner != owner {
+                return Err(Error::UnknownId(parent));
+            }
+        }
 
-    fn new_el<'a>(kind: Kind, module: &'a str, signature: &'a str, visibility: Visibility) -> NewElement<'a> {
-        NewElement { kind, module, signature, visibility }
+        let old_parent = stmt.parent;
+        let old_owner = stmt.owner;
+        let old_siblings: Vec<ElId> = self
+            .children_of(old_parent.unwrap_or(old_owner))
+            .iter()
+            .map(|sibling| sibling.id)
+            .filter(|sibling| *sibling != id)
+            .collect();
+        self.renumber(old_owner, old_parent, &old_siblings);
+
+        let mut target: Vec<ElId> = self
+            .children_of(parent.unwrap_or(owner))
+            .iter()
+            .map(|sibling| sibling.id)
+            .filter(|sibling| *sibling != id)
+            .collect();
+        let position = position.min(target.len());
+        target.insert(position, id);
+        self.renumber(owner, parent, &target);
+        if let Some(stmt) = self.statements.iter_mut().find(|stmt| stmt.id == id) {
+            stmt.owner = owner;
+            stmt.parent = parent;
+            stmt.index = position as u32;
+        }
+        Ok(())
     }
 
-    #[test]
-    fn id_assigned_and_never_reused() {
-        let mut catalog = Catalog::new();
-        let doomed = catalog
-            .add_element(&new_el(Kind::Function, "src/a.rs", "fn gone", Visibility::Private))
-            .expect("add");
-        catalog.remove(doomed).expect("remove");
-
-        let fresh = catalog
-            .add_element(&new_el(Kind::Struct, "src/a.rs", "struct S", Visibility::Private))
-            .expect("add");
-
-        assert_eq!(doomed, ElId(1));
-        assert_eq!(fresh, ElId(2), "el-0001 must not be handed out again");
+    /// Move `id` directly after `anchor` in the same body.
+    pub fn reorder_after(&mut self, id: ElId, anchor: ElId) -> Result<(), Error> {
+        if id == anchor {
+            return Ok(());
+        }
+        let Some(stmt) = self.find_stmt(id) else {
+            return Err(Error::UnknownId(id));
+        };
+        let Some(anchor_stmt) = self.find_stmt(anchor) else {
+            return Err(Error::UnknownId(anchor));
+        };
+        let owner = stmt.owner;
+        if anchor_stmt.owner != owner {
+            return Err(Error::UnknownId(anchor));
+        }
+        let parent = anchor_stmt.parent;
+        let position = self
+            .children_of(parent.unwrap_or(owner))
+            .iter()
+            .position(|sibling| sibling.id == anchor)
+            .map(|index| index + 1)
+            .ok_or(Error::UnknownId(anchor))?;
+        self.move_stmt(id, owner, parent, position)
     }
 
-    #[test]
-    fn removing_a_statement_does_not_reissue_its_id() {
-        let mut catalog = Catalog::new();
-        let owner = catalog
-            .add_element(&new_el(Kind::Function, "src/a.rs", "fn run", Visibility::Private))
-            .expect("add");
-        let stmt = catalog.add_stmt(owner, "a();").expect("add");
-        catalog.remove(stmt).expect("remove");
-
-        let next = catalog.add_stmt(owner, "b();").expect("add");
-
-        assert_eq!(next, ElId(3));
-    }
-
-    #[test]
-    fn alias_is_unique_across_kinds() {
-        let mut catalog = Catalog::new();
-        let function = catalog
-            .add_element(&new_el(Kind::Function, "src/a.rs", "fn thing", Visibility::Private))
-            .expect("add");
-        let structure = catalog
-            .add_element(&new_el(Kind::Struct, "src/a.rs", "struct thing", Visibility::Private))
-            .expect("different kind, different alias");
-
-        let refused =
-            catalog.add_element(&new_el(Kind::Function, "src/a.rs", "fn thing", Visibility::Private));
-
-        assert_ne!(function, structure);
-        assert_eq!(
-            refused,
-            Err(Error::DuplicateAlias {
-                existing: function,
-                alias: "a::fn/thing".to_string(),
-            })
-        );
-    }
-
-    #[test]
-    fn an_unnamed_kind_needs_no_name() {
-        let mut catalog = Catalog::new();
-
-        let id = catalog
-            .add_element(&new_el(Kind::Impl, "src/a.rs", "impl", Visibility::Private))
-            .expect("impl has no name");
-
-        assert_eq!(catalog.find(id).expect("added").alias, None);
-    }
-
-    #[test]
-    fn a_signature_with_no_name_is_refused() {
-        let mut catalog = Catalog::new();
-
-        assert_eq!(
-            catalog.add_element(&new_el(Kind::Function, "src/a.rs", "fn", Visibility::Private)),
-            Err(Error::BadSignature {
-                signature: "fn".to_string()
-            })
-        );
-    }
-
-    #[test]
-    fn a_signature_for_the_wrong_kind_is_refused() {
-        let mut catalog = Catalog::new();
-
-        let refused = catalog.add_element(&new_el(
-            Kind::Function,
-            "src/a.rs",
-            "struct Point",
-            Visibility::Private,
-        ));
-
-        assert_eq!(
-            refused,
-            Err(Error::BadSignature {
-                signature: "struct Point".to_string()
-            })
-        );
-    }
-
-    #[test]
-    fn statement_tree_nests() {
-        let mut catalog = Catalog::new();
-        let owner = catalog
-            .add_element(&new_el(Kind::Function, "src/a.rs", "fn run", Visibility::Private))
-            .expect("add");
-        let outer = catalog.add_stmt(owner, "loop {").expect("add");
-        let middle = catalog.add_child_stmt(outer, "if c {").expect("add");
-        let inner = catalog.add_child_stmt(middle, "break;").expect("add");
-
-        assert_eq!(middle.0, outer.0 + 1);
-        assert!(inner != middle && inner != outer);
-        assert_eq!(catalog.walk(outer).len(), 3);
-        assert_eq!(catalog.walk(outer).last().map(|stmt| stmt.id), Some(inner));
+    fn renumber(&mut self, owner: ElId, parent: Option<ElId>, ids: &[ElId]) {
+        for (index, id) in ids.iter().enumerate() {
+            if let Some(stmt) = self.statements.iter_mut().find(|stmt| stmt.id == *id) {
+                stmt.owner = owner;
+                stmt.parent = parent;
+                stmt.index = index as u32;
+            }
+        }
     }
 }

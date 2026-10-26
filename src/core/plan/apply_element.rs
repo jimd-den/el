@@ -30,6 +30,7 @@ pub fn apply(catalog: &mut Catalog, change: &Change) -> Result<(), Violation> {
             signature,
             visibility,
             body,
+            mode,
         } => {
             let id = catalog
                 .add_element(&NewElement {
@@ -39,13 +40,26 @@ pub fn apply(catalog: &mut Catalog, change: &Change) -> Result<(), Violation> {
                     visibility: *visibility,
                 })
                 .map_err(catalog_error)?;
+            if let Some(element) = catalog.find_mut(id) {
+                element.mode = *mode;
+            }
             add_body(catalog, id, body)
+        }
+        Change::EditBody { id, body, mode } if catalog.find(*id).is_some() => {
+            remove_children(catalog, *id)?;
+            if let Some(element) = catalog.find_mut(*id)
+                && let Some(mode) = mode
+            {
+                element.mode = *mode;
+            }
+            add_body(catalog, *id, body)
         }
         Change::EditElement {
             id,
             head,
             visibility,
             body,
+            mode,
         } => {
             {
                 let element = catalog.find_mut(*id).ok_or_else(|| unknown(*id))?;
@@ -54,6 +68,9 @@ pub fn apply(catalog: &mut Catalog, change: &Change) -> Result<(), Violation> {
                 }
                 if let Some(visibility) = visibility {
                     element.visibility = *visibility;
+                }
+                if let Some(mode) = mode {
+                    element.mode = *mode;
                 }
             }
             if let Some(body) = body {

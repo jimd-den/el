@@ -595,6 +595,7 @@ Projection files carry an ownership marker on line 1; the marker is the contract
 | `forbid` | `unsafe` | Banned constructs are rejected at L0 |
 | `deps` | `none` | `el add dep` without `--allow` is rejected; `--allow` costs one policy line and one journal entry |
 | `gate` | `check` | Default tier: `model`, `check`, `strict`, or `semantic` |
+| `split` | `auto` | Body granularity: `auto` falls back to opaque, `always` refuses an unprovable split, `never` stores every new body opaque (FR-72) |
 | `ra` | `auto` | `auto` uses `rust-analyzer` when present; `off` never spawns it (useful in CI and sandboxes) |
 | `ra_timeout_ms` | `10000` | Per-request LSP timeout; `0` means unlimited (never use it in a loop) |
 | `max_fn_lines` | `0` (off) | Soft warning when a function body exceeds this |

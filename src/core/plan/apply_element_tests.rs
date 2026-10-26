@@ -1,8 +1,9 @@
 // Tests for the element half of `apply`; sibling of the module they exercise.
 
 use super::*;
-use crate::core::model::body::Body;
-use crate::core::model::element::Visibility;
+use crate::core::model::body::{Body, BodyStmt};
+use crate::core::model::change::Anchor;
+use crate::core::model::element::{BodyMode, Visibility};
 use crate::core::model::kind::Kind;
 use crate::core::plan::fixture;
 
@@ -13,6 +14,7 @@ fn add(signature: &str) -> Change {
         signature: signature.to_string(),
         visibility: Visibility::Private,
         body: Body::default(),
+        mode: BodyMode::Split,
     }
 }
 
@@ -61,6 +63,7 @@ fn an_edit_replaces_the_head_and_keeps_the_id() {
             head: Some("(n: usize) -> usize".to_string()),
             visibility: None,
             body: None,
+            mode: None,
         },
     )
     .expect("applied");
@@ -82,6 +85,7 @@ fn an_edit_of_an_unknown_id_is_an_unknown_reference() {
             head: Some("()".to_string()),
             visibility: None,
             body: None,
+            mode: None,
         },
     );
 
@@ -164,7 +168,13 @@ fn a_statement_change_is_not_this_modules_business() {
         &mut catalog,
         &Change::AddStmt {
             owner: run,
-            text: "go();".to_string(),
+            body: Body {
+                statements: vec![BodyStmt {
+                    text: "go();".to_string(),
+                    children: Vec::new(),
+                }],
+            },
+            anchor: Anchor::End,
         },
     )
     .expect("left for apply_stmt");

@@ -72,6 +72,10 @@ pub struct Add {
     pub preamble: Option<Source>,
     /// `--after`: insert after this id instead of appending.
     pub after: Option<String>,
+    /// `--before`: insert before this id.
+    pub before: Option<String>,
+    /// `--at`: zero-based position among the siblings.
+    pub at: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

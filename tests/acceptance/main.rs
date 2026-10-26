@@ -1,3 +1,4 @@
+mod add_statement_by_anchor;
 mod author_builds_program_from_nothing;
 mod program;
 mod read_verbs_filter_and_refuse;
@@ -8,4 +9,6 @@ mod manifest_has_no_deps_by_default;
 mod model_violation_writes_nothing;
 mod mod_tree_is_generated;
 mod policy_ceiling_blocks_growth;
+mod edit_replaces_one_statement_only;
 mod render_matches_golden;
+mod split_policy_is_honoured;

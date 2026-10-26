@@ -13,12 +13,20 @@ pub(super) fn doc_of(catalog: &Catalog, element: &Element) -> Option<String> {
     let statements: Vec<String> = catalog
         .children_of(element.id)
         .into_iter()
-        .filter(|stmt| {
-            element.kind == Kind::Module
-                || stmt.text.trim_start().starts_with("///")
-                || stmt.text.trim_start().starts_with("//!")
+        .filter_map(|stmt| {
+            if element.kind == Kind::Module {
+                return Some(stmt.text.trim_end().to_string());
+            }
+            let doc: Vec<&str> = stmt
+                .text
+                .lines()
+                .take_while(|line| {
+                    let line = line.trim_start();
+                    line.starts_with("///") || line.starts_with("//!")
+                })
+                .collect();
+            (!doc.is_empty()).then(|| doc.join("\n"))
         })
-        .map(|stmt| stmt.text.trim_end().to_string())
         .collect();
     if statements.is_empty() {
         None

@@ -1,12 +1,24 @@
 // Tests for the statement half of `apply`; sibling of the module they exercise.
 
 use super::*;
+use crate::core::model::body::{Body, BodyStmt};
+use crate::core::model::change::Anchor;
 use crate::core::plan::fixture;
+
+fn body(text: &str) -> Body {
+    Body {
+        statements: vec![BodyStmt {
+            text: text.to_string(),
+            children: Vec::new(),
+        }],
+    }
+}
 
 fn add(owner: ElId, text: &str) -> Change {
     Change::AddStmt {
         owner,
-        text: text.to_string(),
+        body: body(text),
+        anchor: Anchor::End,
     }
 }
 
@@ -46,7 +58,7 @@ fn an_edit_keeps_the_id_and_the_index() {
         &mut catalog,
         &Change::EditStmt {
             id: stmt,
-            text: "b();".to_string(),
+            body: body("b();"),
         },
     )
     .expect("applied");
@@ -64,7 +76,7 @@ fn an_edit_of_an_unknown_statement_is_an_unknown_reference() {
         &mut catalog,
         &Change::EditStmt {
             id: ElId(11),
-            text: "b();".to_string(),
+            body: body("b();"),
         },
     );
 

@@ -14,6 +14,34 @@
 
 use std::fmt;
 
+/// How a new body is stored. `auto` splits when the grammar can, `always` refuses
+/// a body it cannot split, and `never` keeps the body opaque (FR-72).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Split {
+    Auto,
+    Always,
+    Never,
+}
+
+impl Split {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Always => "always",
+            Self::Never => "never",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "auto" => Some(Self::Auto),
+            "always" => Some(Self::Always),
+            "never" => Some(Self::Never),
+            _ => None,
+        }
+    }
+}
+
 /// What a project allows a change to do.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Policy {
@@ -28,6 +56,7 @@ pub struct Policy {
     pub allowed_deps: Vec<String>,
     /// Verbatim, because the gate tier interprets it, not the policy.
     pub gate: String,
+    pub split: Split,
 }
 
 impl Default for Policy {
@@ -39,6 +68,7 @@ impl Default for Policy {
             forbid: vec!["unsafe".to_string()],
             allowed_deps: Vec::new(),
             gate: "check".to_string(),
+            split: Split::Auto,
         }
     }
 }
@@ -114,6 +144,10 @@ impl Policy {
                     return Err(bad("gate must be model, check, strict or semantic"));
                 }
                 self.gate = value.to_string();
+            }
+            "split" => {
+                self.split = Split::parse(value)
+                    .ok_or_else(|| bad("split must be auto, always or never"))?
             }
             _ => return Err(bad("unknown key")),
         }

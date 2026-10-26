@@ -103,6 +103,8 @@ fn add(args: &Args) -> Result<Add, Usage> {
         doc: source(args.value("--doc")?),
         preamble: source(args.value("--preamble")?),
         after: args.value("--after")?,
+        before: args.value("--before")?,
+        at: at(args.value("--at")?)?,
     })
 }
 
@@ -131,6 +133,15 @@ fn visibility(value: Option<String>) -> Result<Option<Visibility>, Usage> {
 
 fn source(value: Option<String>) -> Option<Source> {
     value.map(|text| Source::parse(&text))
+}
+
+fn at(value: Option<String>) -> Result<Option<usize>, Usage> {
+    match value {
+        None => Ok(None),
+        Some(text) => text.parse().map(Some).map_err(|_| {
+            Usage::new("usage.bad_value", format!("--at takes a number, not {text:?}"))
+        }),
+    }
 }
 
 fn count(value: Option<&str>) -> Result<Option<usize>, Usage> {

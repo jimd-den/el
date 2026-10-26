@@ -7,22 +7,25 @@
 // the refusal codes honest about which layer refused.
 
 use super::error;
-use super::report::{Changed, Error};
+use super::report::Error;
 use crate::cli::request::{Add, Edit, Mv};
-use crate::core::model::catalog::Catalog;
-use crate::core::model::change::Change;
+use crate::core::model::change::{Anchor, Change};
 use crate::core::model::element::Visibility;
 use crate::core::model::id::ElId;
 use crate::core::model::kind::Kind;
+use crate::core::plan::policy::Split;
 
 mod body;
+mod describe;
 
-pub fn add(env: &super::Env<'_>, add: Add, stdin: &str) -> Result<Change, Error> {
+pub use describe::describe;
+
+pub fn add(env: &super::Env<'_>, add: Add, stdin: &str, split: Split) -> Result<Change, Error> {
     if add.kind == Kind::Stmt {
-        return Err(error::unsupported("add", "add stmt (M7 owns statements)"));
+        return add_statement(env, &add, stdin);
     }
-    if add.after.is_some() {
-        return Err(error::unsupported("add", "--after"));
+    if add.after.is_some() || add.before.is_some() || add.at.is_some() {
+        return Err(error::unsupported("add", "an anchor on a non-statement"));
     }
     if add.doc.is_some() {
         return Err(error::unsupported("add", "--doc"));
@@ -36,9 +39,9 @@ pub fn add(env: &super::Env<'_>, add: Add, stdin: &str) -> Result<Change, Error>
         _ => add.module.clone().unwrap_or_else(|| body::root_module(env)),
     };
     let signature = body::signature(&add);
-    let body = match add.kind {
-        Kind::Module => body::preamble(env, &add, stdin),
-        _ => body::body(env, add.body.as_ref(), stdin, add.kind.needs_body()),
+    let (body, mode) = match add.kind {
+        Kind::Module => (body::preamble(env, &add, stdin)?, crate::core::model::element::BodyMode::Split),
+        _ => body::element_body(env, add.body.as_ref(), stdin, add.kind.needs_body(), split)?,
     };
 
     Ok(Change::AddElement {
@@ -46,19 +49,22 @@ pub fn add(env: &super::Env<'_>, add: Add, stdin: &str) -> Result<Change, Error>
         module,
         signature,
         visibility: add.visibility.unwrap_or(Visibility::Private),
-        body: body?,
+        body,
+        mode,
     })
 }
 
-pub fn edit(env: &super::Env<'_>, edit: Edit, stdin: &str) -> Result<Change, Error> {
+pub fn edit(env: &super::Env<'_>, edit: Edit, stdin: &str, split: Split) -> Result<Change, Error> {
     if edit.doc.is_some() {
         return Err(error::unsupported("edit", "--doc"));
     }
     let id = parse_id(&edit.id)?;
-    let body = match edit.body.as_ref() {
-        Some(source) => Some(body::body(env, Some(source), stdin, true)?),
+    let parsed = match edit.body.as_ref() {
+        Some(source) => Some(body::element_body(env, Some(source), stdin, true, split)?),
         None => None,
     };
+    let body = parsed.as_ref().map(|(body, _)| body.clone());
+    let mode = parsed.map(|(_, mode)| mode);
     if edit.rename.is_some()
         && (edit.signature.is_some() || edit.visibility.is_some() || body.is_some())
     {
@@ -82,11 +88,19 @@ pub fn edit(env: &super::Env<'_>, edit: Edit, stdin: &str) -> Result<Change, Err
             message: "edit needs at least one of --rename, --sig, --vis or --body".to_string(),
         });
     }
+    if edit.signature.is_none() && edit.visibility.is_none() {
+        return Ok(Change::EditBody {
+            id,
+            body: body.expect("body is present"),
+            mode,
+        });
+    }
     Ok(Change::EditElement {
         id,
         head: edit.signature,
         visibility: edit.visibility,
         body,
+        mode,
     })
 }
 
@@ -102,13 +116,19 @@ pub fn remove(ids: &[String]) -> Result<Vec<Change>, Error> {
 }
 
 pub fn move_(mov: Mv) -> Result<Change, Error> {
-    if mov.after.is_some() {
-        return Err(error::unsupported("mv", "--after (statement reorder is M7)"));
+    if let Some(after) = &mov.after {
+        if mov.module.is_some() {
+            return Err(error::unsupported("mv", "--after with a module"));
+        }
+        return Ok(Change::ReorderStmt {
+            id: parse_id(&mov.subject)?,
+            after: parse_id(after)?,
+        });
     }
     let module = mov.module.ok_or_else(|| Error {
         code: "usage.missing_argument",
         exit: super::Exit::Usage,
-        message: "mv needs a module".to_string(),
+        message: "mv needs a module or --after".to_string(),
     })?;
     Ok(Change::MoveElement {
         id: parse_id(&mov.subject)?,
@@ -116,61 +136,27 @@ pub fn move_(mov: Mv) -> Result<Change, Error> {
     })
 }
 
-/// What changed between two catalogs, in the envelope's words.
-pub fn describe(change: &Change, before: &Catalog, after: &Catalog) -> Vec<Changed> {
-    match change {
-        Change::AddElement { kind, .. } => added_element(before, after, *kind),
-        Change::AddStmt { .. } => added_statement(before, after),
-        Change::EditElement { id, .. } => one("edit", *id, after),
-        Change::MoveElement { id, .. } => one("mv", *id, after),
-        Change::Rename { id, .. } => one("rename", *id, after),
-        Change::Remove { id } => vec![Changed {
-            op: "rm",
-            id: id.to_string(),
-            alias: None,
-        }],
-        _ => Vec::new(),
-    }
-}
-
-fn one(op: &'static str, id: ElId, after: &Catalog) -> Vec<Changed> {
-    vec![Changed {
-        op,
-        id: id.to_string(),
-        alias: after
-            .find(id)
-            .and_then(|element| element.alias.as_ref().map(|alias| alias.to_string())),
-    }]
-}
-
-fn added_element(before: &Catalog, after: &Catalog, kind: Kind) -> Vec<Changed> {
-    let Some(element) = after
-        .elements
-        .iter()
-        .find(|element| element.kind == kind && before.find(element.id).is_none())
-    else {
-        return Vec::new();
+fn add_statement(env: &super::Env<'_>, add: &Add, stdin: &str) -> Result<Change, Error> {
+    let owner = parse_id(&add.name)?;
+    let source = add.body.as_ref().ok_or_else(|| Error {
+        code: "usage.missing_argument",
+        exit: super::Exit::Usage,
+        message: "add stmt needs --body".to_string(),
+    })?;
+    let body = body::body(env, Some(source), stdin, true)?;
+    let anchor = match (&add.after, &add.before, add.at) {
+        (Some(after), None, None) => Anchor::After(parse_id(after)?),
+        (None, Some(before), None) => Anchor::Before(parse_id(before)?),
+        (None, None, Some(at)) => Anchor::At(at),
+        (None, None, None) => Anchor::End,
+        _ => {
+            return Err(error::unsupported(
+                "add stmt",
+                "more than one of --after, --before, --at",
+            ));
+        }
     };
-    vec![Changed {
-        op: "add",
-        id: element.id.to_string(),
-        alias: element.alias.as_ref().map(|alias| alias.to_string()),
-    }]
-}
-
-fn added_statement(before: &Catalog, after: &Catalog) -> Vec<Changed> {
-    let Some(stmt) = after
-        .statements
-        .iter()
-        .find(|stmt| before.find_stmt(stmt.id).is_none())
-    else {
-        return Vec::new();
-    };
-    vec![Changed {
-        op: "add",
-        id: stmt.id.to_string(),
-        alias: None,
-    }]
+    Ok(Change::AddStmt { owner, body, anchor })
 }
 
 pub fn parse_id(text: &str) -> Result<ElId, Error> {
