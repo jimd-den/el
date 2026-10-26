@@ -63,3 +63,10 @@ python3 tools/check_line_budget.py  # 200 lines, no exceptions
 ```
 
 Nothing in `src/` may exist without a failing test that demanded it (`AGENTS.md` §2.1).
+
+---
+
+## Licence
+
+MIT — see `LICENSE`. Use it, fork it, ship it; the only thing asked is that the copyright
+notice travels with it.

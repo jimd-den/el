@@ -3,5 +3,9 @@ name = "el"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99.1"
+license = "MIT"
+description = "Build Rust programs by element: every change is compiler-checked before it is applied, and exactly reversible."
+repository = "https://github.com/jimd-den/el"
+readme = "README.md"
 
 [dependencies]
