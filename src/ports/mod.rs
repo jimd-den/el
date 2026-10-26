@@ -5,6 +5,13 @@
 // Nothing here may name a concrete adapter. An implementation lives in
 // `adapters/`, and `main.rs` is the only place that picks one.
 
+pub mod clock;
 pub mod fs;
+pub mod tools;
 
+#[cfg(test)]
+pub mod fs_fake;
+
+pub use clock::Clock;
 pub use fs::{Fs, Kind};
+pub use tools::{Finished, Tools};
