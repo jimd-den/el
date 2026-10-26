@@ -117,6 +117,7 @@ pub struct Show {
     pub statements: bool,
     pub source: bool,
     pub history: bool,
+    pub terse: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

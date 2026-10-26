@@ -47,6 +47,16 @@ fn show_reads_its_id_and_optional_views() {
 }
 
 #[test]
+fn show_reads_terse() {
+    let Command::Show(show) = parsed("show el-0005 --terse").command else {
+        panic!("not a show");
+    };
+
+    assert!(show.terse);
+    assert!(!show.statements && !show.source && !show.history);
+}
+
+#[test]
 fn ls_refuses_an_unknown_kind_and_lists_the_ones_that_exist() {
     let refusal = refused("ls --kind widget");
 

@@ -23,7 +23,7 @@ fn show_a_named_element_has_every_documented_field() {
         &projection,
         &entries,
         element,
-        &Options { statements: true, source: true, history: true },
+        &Options { statements: true, source: true, history: true, terse: false },
     );
 
     let payload = &view.payload;
@@ -64,7 +64,7 @@ fn show_a_module_owns_the_entry_that_added_the_module_not_its_function() {
         &projection,
         &entries,
         element,
-        &Options { statements: false, source: false, history: true },
+        &Options { statements: false, source: false, history: true, terse: false },
     );
 
     assert_eq!(field(&view.payload, "sequence").as_str(), None);
@@ -84,7 +84,7 @@ fn show_an_unnamed_element_has_a_null_alias_and_no_doc() {
         &projection,
         &entries,
         element,
-        &Options { statements: false, source: true, history: false },
+        &Options { statements: false, source: true, history: false, terse: false },
     );
 
     let payload = &view.payload;
@@ -109,7 +109,7 @@ fn show_a_statement_has_its_owner_and_its_source() {
         &projection,
         &entries,
         stmt,
-        &Options { statements: false, source: true, history: true },
+        &Options { statements: false, source: true, history: true, terse: false },
     );
 
     assert_eq!(field(&view.payload, "id").as_str(), Some("el-0014"));

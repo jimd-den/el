@@ -43,6 +43,7 @@ pub fn show(
     statements: bool,
     source: bool,
     history: bool,
+    terse: bool,
 ) -> Report {
     let id = match change::parse_id(id) {
         Ok(id) => id,
@@ -60,6 +61,7 @@ pub fn show(
         statements,
         source,
         history,
+        terse,
     };
     let view = match catalog.find(id) {
         Some(element) => inspect::show(&catalog, &projection, &entries, element, &options),

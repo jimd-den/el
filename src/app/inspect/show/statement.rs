@@ -5,6 +5,7 @@
 use super::super::View;
 use super::context::{mentions, owning_sequence};
 use super::detail::{entry_json, statement_json, statement_lines};
+use super::terse;
 use super::Options;
 use crate::core::history::entry::Entry;
 use crate::core::model::catalog::Catalog;
@@ -49,9 +50,17 @@ pub fn statement(
         ("text".to_string(), Json::Str(stmt.text.clone())),
         ("statements".to_string(), Json::Array(ids.into_iter().map(Json::Str).collect())),
     ];
+    if options.terse {
+        lines = Vec::new();
+        terse::stmt_header(stmt, &mut lines);
+    }
     if options.statements {
-        lines.push("statements:".to_string());
-        statement_lines(catalog, stmt.id, 2, &mut lines);
+        if options.terse {
+            terse::statement_lines(catalog, stmt.id, 2, &mut lines);
+        } else {
+            lines.push("statements:".to_string());
+            statement_lines(catalog, stmt.id, 2, &mut lines);
+        }
         fields.push(("statement_tree".to_string(), statement_json(catalog, stmt.id)));
     }
     if options.source {

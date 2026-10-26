@@ -10,8 +10,9 @@ use crate::core::text::json::Json;
 
 pub(super) fn statement_lines(catalog: &Catalog, parent: ElId, indent: usize, lines: &mut Vec<String>) {
     for stmt in catalog.children_of(parent) {
-        let text = stmt.text.lines().next().unwrap_or("").trim_end();
-        lines.push(format!("{}{}  {}", " ".repeat(indent), stmt.id, text));
+        for line in stmt.text.lines() {
+            lines.push(format!("{}{}  {}", " ".repeat(indent), stmt.id, line.trim_end()));
+        }
         statement_lines(catalog, stmt.id, indent + 2, lines);
     }
 }

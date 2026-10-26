@@ -20,6 +20,9 @@ mod tests;
 #[cfg(test)]
 #[path = "show_tests.rs"]
 mod show_tests;
+#[cfg(test)]
+#[path = "show_terse_tests.rs"]
+mod show_terse_tests;
 
 use crate::core::text::json::Json;
 
