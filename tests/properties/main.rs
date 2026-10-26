@@ -5,3 +5,5 @@
 
 mod catalog_round_trips;
 mod split_round_trips;
+
+mod render_is_deterministic;

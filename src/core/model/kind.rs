@@ -72,6 +72,23 @@ impl Kind {
         matches!(self, Kind::Function | Kind::Impl | Kind::Module)
     }
 
+    /// Whether the item's text is followed by `{ … }` or by `;`.
+    ///
+    /// Not the same question as `needs_body`: a `struct` may be a unit struct with
+    /// no body at all, but when it has fields they are brace-delimited, and a
+    /// renderer that wrote `struct Point;` would silently drop them.
+    pub fn takes_block(&self) -> bool {
+        matches!(
+            self,
+            Kind::Module
+                | Kind::Function
+                | Kind::Struct
+                | Kind::Enum
+                | Kind::Trait
+                | Kind::Impl
+        )
+    }
+
     /// Whether an element of this kind may own child elements.
     pub fn can_nest(&self) -> bool {
         matches!(self, Kind::Module | Kind::Impl | Kind::Trait | Kind::Struct | Kind::Enum)
@@ -91,7 +108,7 @@ mod tests {
     #[test]
     fn kind_rules_are_total() {
         for kind in Kind::all() {
-            let answers = (kind.needs_name(), kind.needs_body(), kind.can_nest());
+            let answers = (kind.needs_name(), kind.needs_body(), kind.can_nest(), kind.takes_block());
             let _ = answers;
         }
     }
@@ -115,6 +132,17 @@ mod tests {
     #[test]
     fn an_unknown_token_is_refused() {
         assert_eq!(Kind::parse("class"), None);
+    }
+
+    #[test]
+    fn every_kind_answers_whether_it_takes_a_block() {
+        for kind in Kind::all() {
+            assert_eq!(
+                kind.takes_block(),
+                !matches!(kind, Kind::Const | Kind::Static | Kind::TypeAlias | Kind::Stmt),
+                "{kind} has no answer for takes_block"
+            );
+        }
     }
 
     #[test]

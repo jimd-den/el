@@ -36,6 +36,19 @@ impl Visibility {
         }
     }
 
+    /// The more visible of two: `pub` beats `pub(crate)` beats private.
+    ///
+    /// Named rather than reached for with `max`, because the derived `Ord` is not
+    /// the ordering of wideness — `Private` is the narrowest and sorts last, and
+    /// a caller that used `max` would hide exactly what it meant to expose.
+    pub fn wider(self, other: Visibility) -> Visibility {
+        match (self, other) {
+            (Visibility::Pub, _) | (_, Visibility::Pub) => Visibility::Pub,
+            (Visibility::Crate, _) | (_, Visibility::Crate) => Visibility::Crate,
+            (Visibility::Private, Visibility::Private) => Visibility::Private,
+        }
+    }
+
     pub fn parse(text: &str) -> Option<Self> {
         match text {
             "pub" => Some(Visibility::Pub),
@@ -95,6 +108,17 @@ mod tests {
         for mode in [BodyMode::Split, BodyMode::Opaque] {
             assert_eq!(BodyMode::parse(mode.as_str()), Some(mode));
         }
+    }
+
+    #[test]
+    fn the_wider_visibility_wins_either_way_round() {
+        use Visibility::{Crate, Private, Pub};
+
+        assert_eq!(Pub.wider(Private), Pub);
+        assert_eq!(Private.wider(Pub), Pub);
+        assert_eq!(Crate.wider(Private), Crate);
+        assert_eq!(Private.wider(Private), Private);
+        assert_eq!(Pub.wider(Crate), Pub);
     }
 
     #[test]
