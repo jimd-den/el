@@ -69,9 +69,11 @@ el init [--force]
 ```
 
 `new` writes a crate with `src/main.rs` (or `src/lib.rs`), an empty manifest, `el.policy`
-with the `AGENTS.md` defaults, `.gitignore`, and `.el/` seeded with entry seq 1.
-`init` adopts an existing directory: everything under `src/` is imported as opaque modules
-(`ADR-0009`), so nothing is lost and nothing is silently rewritten.
+with the `AGENTS.md` defaults (except `gate = model` until M9 adds L1), `.gitignore`, and
+`.el/` seeded with entry seq 1 (`init`) followed by the root module's `add` entry — the two
+entries are one command's history, not two commands. `init` adopts an existing directory:
+everything under `src/` is imported as opaque modules (`ADR-0009`), so nothing is lost and
+nothing is silently rewritten. `init` is not in M6.
 
 ### 4.2 Mutate
 
@@ -93,9 +95,15 @@ el apply [<file>|-] [--dry-run] [--json]
 Kinds: `mod`, `fn`, `struct`, `enum`, `trait`, `impl`, `const`, `static`, `type`, `use`,
 `test`, `stmt`.
 
-`--body -` reads the body from stdin to EOF; `--body <file>` reads a file. Bodies are opaque
-text: syntax is the caller's business, the gate is the arbiter. `el add fn` without
-`--body` writes `todo!()` and says so.
+`--body -` reads the body from stdin to EOF; `--body <file>` reads a file. Bodies are parsed
+by `el` into one statement per line tree: a line ending `{` owns its block, the renderer
+supplies the closing brace, non-tail statements gain `;`, a tail expression does not, and
+unclosed `(`/`[` are closed, and a logical statement continues across lines while `(`/`[`
+is open. `el` still does not parse Rust expressions; `else` branches and `};` are refused
+as documented in ADR-0019.
+`el add fn` without `--body` writes `todo!()` and says so. `add mod` without `--preamble`
+writes one generated comment, because `require_preamble = true` would otherwise refuse the
+module it just created.
 
 `add` prints the new id on stdout (`FR-6`). `edit` prints the ids it changed. `rm` prints
 the ids it removed **and every remaining reference** (`FR-9`); dangling references are an

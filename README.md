@@ -14,9 +14,11 @@ hello
 $ el undo && el log
 ```
 
-**Design status: draft, first modules implemented.** The model types and the text splitter
-exist and are tested; the verbs, the store, the gate and the history are specified but not
-implemented. `make check` is green. The console transcript above is the target, not a claim.
+**Design status: M6 — first usable release.** `el new`, `add`, `edit`, `rm`, `mv`, `run`
+and `log` work in a real crate, with the lock, inflight recovery, drift detection, a
+content-addressed store, and a body grammar that supplies closing braces and semicolons.
+The default gate is L0 (`model`); `--strict` adds clippy; L1 and history verbs are M8/M9.
+`make check` is green. The transcript's `el undo` line is still the target, not a claim.
 
 ---
 
@@ -30,7 +32,7 @@ implemented. `make check` is green. The console transcript above is the target, 
 | `docs/HISTORY.md` | The catalog, the journal, content-addressed snapshots, undo/redo/revert, crash recovery |
 | `docs/ARCHITECTURE.md` | The clean-architecture layout: layers, the dependency rule, the ~41 files that will exist, and how the boundaries are enforced by tests |
 | `docs/PLAN.md` | Thirteen milestones from an empty directory to a self-hosting tool, with the red test that starts each one, a cut list, and risks |
-| `docs/adr/` | Fourteen decision records: zero dependencies, catalog-as-truth, stable ids, transactional apply, error delta, history store, network-as-subprocess, hand-rolled parsing, projection ownership, project constants, `rust-analyzer` as an LSP subprocess, statements as elements, the lexical splitter, symbol-tree import |
+| `docs/adr/` | Twenty decision records: zero dependencies, catalog-as-truth, stable ids, transactional apply, error delta, history store, network-as-subprocess, hand-rolled parsing, projection ownership, project constants, `rust-analyzer` as an LSP subprocess, statements as elements, the lexical splitter, symbol-tree import, the transaction/journal port, and grammar-owned bodies |
 | `docs/reports/prior-art.md` | What already exists (cargo-edit, rust-script, ast-grep, rust-analyzer, cargo-nextest, agent-CLI writing), what we take, what we reject |
 
 ---

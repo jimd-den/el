@@ -62,6 +62,13 @@ A boundary that is not tested is a comment.
 Sizes are the design budget (`AGENTS.md` §4: ≤ 200 per file, healthy band 25–200).
 Estimated totals: ~6,000 lines of source across ~70 files, largest ~180.
 
+Measured 2026-10-26 (M6, the files that exist): `main.rs` 122; `app/change` 175 + 88,
+`app/transaction` 190 + 18 + 65 + 19, `app/verbs` 191, `app/projection` 123, `app/create`
+94, `app/load` 58; `ports/journal` 60; `adapters/store` 188 + 47 + 87; `core/text/grammar`
+119 + 120; `core/model/body` 20; `cli/args` 141, `cli/parse` 166. The tree below is still
+the target for M7–M12; a line that names a file M6 has replaced is marked by the measured
+sizes above.
+
 ```text
 src/
   main.rs                      45   composition root; the only file that names adapters
@@ -145,7 +152,7 @@ src/
     fetcher.rs                 30   fetch(url) → bytes, or a named "no fetcher" error
   adapters/
     fs_local.rs               155   tmp→fsync→rename, sorted listing, path containment
-                                       (lock and drift scan arrive with M6)
+                                       (lock is adapters::lock; drift is app::projection)
     tools_proc.rs             150   std::process::Command, timeout kill, stderr quarantine
     cargo.rs                  120   check/clippy/test/build/run argv construction + capture
     ra/

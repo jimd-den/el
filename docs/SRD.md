@@ -207,7 +207,7 @@ hello, world
 ```
 
 **Acceptance:** `tests/acceptance/author_builds_program_from_nothing.rs` — exits 0, stdout
-contains `hello, world`. Gate ran on every mutation; `el log` shows five entries, all `gate=ok`.
+contains `hello, world`. Gate ran on every mutation; `el log` shows five entries (the `init` and root-module entries from `new`, then three adds), all `gate=model` until M9 adds L1.
 
 ### UC-2 Agent adds a function and is told, before the commit, that it would not compile
 
