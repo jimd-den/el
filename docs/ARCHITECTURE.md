@@ -128,23 +128,24 @@ src/
       verdict.rs               80   Commit | Reject | Note
       budget.rs                90   file/function/statement budgets (FR-26, FR-73)
     history/
-      mod.rs                   30
-      sha256.rs               110   content addressing, NIST-tested
-      object.rs                70   blob read/write, digest verification
-      tree.rs                 100   tree encode/decode, set operations (diff)
-      entry.rs                 95   journal entry encode/decode
+      mod.rs                   21   the package: blobs, trees, entries; pure
+      sha256.rs               144   FIPS 180-4, NIST vectors, strict hex
+      object.rs                84   digest, path = digest, `verify`, Corrupt
+      tree.rs                 137   sorted `path⇥digest`, decode, symmetric diff
+      entry.rs                174   ten fields, `el1` tag, sanitize, truncate
     search/
       index.rs                120   parse std docs index page → entries
       result.rs                70   Result type, ranking, dedup, limit
   ports/
     mod.rs                     20
-    fs.rs                      60   read/write/rename/remove/list/exists; atomic write
+    fs.rs                     109   read/write/remove/list/exists; crash-atomic write
     tools.rs                   70   run(argv, stdin, timeout) → Exit{code, stdout, stderr}
     clock.rs                   20   now_unix() — injected, never `SystemTime` in core
     out.rs                     70   Out trait: human / json implementations
     fetcher.rs                 30   fetch(url) → bytes, or a named "no fetcher" error
   adapters/
-    fs_local.rs               170   atomic tmp+fsync+rename, lock, drift scan
+    fs_local.rs               155   tmp→fsync→rename, sorted listing, path containment
+                                       (lock and drift scan arrive with M6)
     tools_proc.rs             150   std::process::Command, timeout kill, stderr quarantine
     cargo.rs                  120   check/clippy/test/build/run argv construction + capture
     ra/

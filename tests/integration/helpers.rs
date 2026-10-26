@@ -14,7 +14,7 @@ use el::core::model::id::ElId;
 use el::core::model::kind::Kind;
 use el::core::render::render;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const ROOT: &str = "target/integration/rendered";
@@ -105,4 +105,19 @@ pub fn assert_compiles(name: &str, catalog: &Catalog) {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+}
+
+/// An empty directory under `target/integration` for a test that needs a real
+/// store or a real tree on disk.
+///
+/// Under `target/` so a failing test leaves its evidence where the next run will
+/// clean it, and never in the repository. Named by the caller so two tests cannot
+/// share one store by accident.
+pub fn fresh_dir(name: &str) -> PathBuf {
+    let root = Path::new("target/integration").join(name);
+    if root.exists() {
+        fs::remove_dir_all(&root).expect("clean");
+    }
+    fs::create_dir_all(&root).expect("create");
+    root
 }

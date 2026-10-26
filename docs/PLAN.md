@@ -38,8 +38,8 @@ Every line of implementation is demanded by a test written first.
 | M1 | The model | a catalog can be built, addressed and round-tripped | ✅ |
 | M2 | Text toolkit | bodies split losslessly, JSON is read and written | ✅ |
 | M3 | Rendering | a catalog becomes Rust files and a span map | ✅ |
-| M4 | Plan and L0 | an impossible change is refused with nothing written | ☐ stub |
-| M5 | The store | every projection is content-addressed and restorable | ☐ stub |
+| M4 | Plan and L0 | an impossible change is refused with nothing written | ✅ |
+| M5 | The store | every projection is content-addressed and restorable | ✅ |
 | M6 | Transaction and first verbs | **UC-1**: a program built from five commands | ☐ stub |
 | M7 | Statements | **UC-11/UC-12**: one line changes, nothing else moves | ☐ stub |
 | M8 | History verbs | **UC-3**: review and rollback | ☐ stub |
@@ -289,6 +289,56 @@ read it back, assert a named error and no silent use.
 
 **Done when.** `doctor --rebuild` is not implemented yet, but the store's own round-trip test
 proves every recorded entry can be decoded and re-encoded byte-identically.
+
+**Status 2026-10-25: ✅ — the six units landed, and the crash story is split between two layers.**
+
+*The RED test compiles against the real adapter and the real store root, because "we verify on
+read" is a claim about bytes that came back off a filesystem.* A fake `Fs` would have proved that
+the fake was honest. `corrupt_object_is_detected.rs` writes a blob, flips one bit on disk with
+`std::fs`, reads it back, and asserts `env.corrupt` naming **both** digests — plus a control test
+that an intact blob reads back byte-identically, without which a reader that always failed would
+have passed. `history` stays pure: it frames, sorts, encodes and verifies; it names no file, and
+`tests/meta_core_is_pure.rs` is what keeps that true.
+
+**What was pinned, and how it was proved.** All of these went green on their first run, so they
+are pins rather than reds. Each was killed by mutating the code it is supposed to defend:
+
+| Mutation | What failed |
+|---|---|
+| `object::verify` returns `Ok` for anything | 2 tests: a flipped byte became silence |
+| `object::path` drops the two-character fan-out | 2 tests, including the path shape |
+| `entry::sanitize` becomes the identity | `free_text_is_sanitized_so_a_record_cannot_forge_the_next_one` |
+| the 200-character truncation is removed | `a_long_message_is_truncated_to_two_hundred_characters` |
+| `Tree::new` stops sorting | 2 tests: arrival order leaked into the encoding |
+| `Tree::diff` stops reporting `changed` | `the_diff_names_what_was_added_removed_and_changed` |
+| `Tree::new` accepts a duplicate path | 2 tests, including the hand-edited tree |
+| `Fs::write` writes the target directly, no staging | `a_write_that_cannot_stage_leaves_the_previous_bytes_intact` |
+| `resolve` stops refusing `..` and absolute paths | `a_path_that_would_leave_the_store_is_refused` |
+| `list` stops excluding `tmp/` | `staging_files_are_never_listed_as_store_content` |
+| `list` reverses instead of sorting | `a_store_written_in_two_runs_lists_the_same_way_each_time` |
+| `remove` of an absent path becomes an error | `listing_a_store_that_was_never_written_is_empty_and_not_an_error` |
+| `read` of an absent path becomes an error | the same test |
+
+**The crash contract is simulated where a crash would actually stop.** Killing a process between
+`tmp` and `rename` would be a flaky test; making `tmp/` unwritable is not. The old bytes survive,
+which is the negative half of `I3`; the positive half — "the new bytes are visible" — is the
+ordinary write test. The *ordering* across files (objects, then trees, then the entry) is not
+claimed here; it belongs to M6's transaction, and `PLAN.md` says so rather than implying it.
+
+**One test was wrong in a way the mutation found.** `a_path_that_would_leave_the_store_is_refused`
+asserted that `../escape` was never created, but looked for it *outside* the directory the test
+cleans. The mutation created the file, the test failed as designed, and the next honest run then
+failed too — the assertion was measured against a dirty world. The store root now lives inside the
+cleaned directory, so the test owns everything it makes a claim about.
+
+**Files.** `src/core/history/` in four modules (144, 84, 137, 174 lines) plus three test siblings;
+`src/ports/fs.rs` (109) and `src/adapters/fs_local.rs` (155). Largest file 174. Gate: 334 tests,
+`make check` exit 0.
+
+**Accepted debt, recorded in ADR-0018.** No `lock`, no `inflight`, no drift scan, no `rename` on
+the port, and verify-on-read is a convention with one call site — the signal that it rotted is a
+second hand-written `verify`, and the fix then is a `Store` in `adapters/`, not another
+convention.
 
 ---
 
