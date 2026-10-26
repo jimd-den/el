@@ -19,8 +19,8 @@ $ el undo && el log
 insert/edit/reorder, and the split policy work in a real crate, with the lock, inflight
 recovery, drift detection, a content-addressed store, and a body grammar that supplies
 closing braces and semicolons. The default gate is L0 (`model`); `--strict` adds clippy;
-L1 is M9. `make check` is green. The
-transcript's `el undo` line is still the target, not a claim.
+L1 is M9. `make check` is green. The transcript's gate line is the M9 target; the
+`el undo` line is real.
 
 ---
 
