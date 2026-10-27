@@ -106,9 +106,12 @@ pub(super) fn entry_payload(entry: &Entry) -> Json {
     ])
 }
 
+/// The package version this binary was built from. The milestone is deliberately
+/// absent: it lives in `README.md` and `docs/PLAN.md`, which is one place fewer
+/// than the number that shipped said `M6` while the crate shipped M8.
 pub fn version() -> Report {
     let mut report = Report::new("version");
-    let text = "el 0.1.0 (M6)".to_string();
+    let text = format!("el {}", env!("CARGO_PKG_VERSION"));
     report.lines.push(text.clone());
     report.payload = Some(Json::Str(text));
     report

@@ -13,6 +13,7 @@ mod rebuild_from_journal;
 mod rename_keeps_a_module_qualifier;
 mod revert_appends;
 mod undo_restores_bytes;
+mod version_names_the_crate_version;
 mod diagnostics_map_to_elements;
 mod manifest_has_no_deps_by_default;
 mod model_violation_writes_nothing;
