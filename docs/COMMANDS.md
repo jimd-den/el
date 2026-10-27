@@ -111,9 +111,14 @@ anchor. `add` prints the new id on stdout (`FR-6`). `edit` prints the ids it cha
 the ids it removed **and every remaining reference** (`FR-9`); dangling references are an
 L0 violation unless `--cascade`, which removes them in the same transaction.
 
-`--rename` on a function, struct, enum, trait or const uses `rust-analyzer`'s
-`textDocument/rename` when available (`FR-51`); `--fast` uses the catalog's own reference
-rewriting. The output states which one ran.
+`--rename` rewrites the catalog's own references: whole identifiers only, in statement
+text and element heads, with strings, comments, char literals and lifetimes untouched. It is
+a token rewrite, not name resolution — when the renamed element is not a module, the
+qualifier in `greet::call()` and the member in `plan.apply()` are left alone; when it is a
+module, only qualifier sites are rewritten. A rename the rewrite could not complete is
+refused by the compiler gate, which is why an incomplete one is visible rather than silent.
+`rust-analyzer`-backed `textDocument/rename` (`FR-51`, `FR-52`) is scheduled for M10 as
+`ADR-0011` describes it and is **not built**: the binary has no LSP adapter.
 
 `apply` reads a batch script, one change per line, comments with `#`:
 
@@ -126,6 +131,7 @@ rm el-0011
 ```
 
 The whole script is one transaction: one journal entry, one gate, all-or-nothing (`FR-10`).
+`apply` is specified but unbuilt; `batch` below is the built half of the same intent.
 
 `batch` is `apply`'s JSON sibling, built: it reads a JSON array from stdin, one
 object per `add` (`kind`, `name`, `in`, `vis`, `sig`, `body`; a module item's
@@ -157,6 +163,9 @@ el catalog [--json]
 | `explain` | Why it exists: module preamble, doc text, RA hover when available (`FR-55`), callers, tests that name it, last 5 history entries |
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |
+
+`explain`, `refs` and `catalog` are specified but unbuilt: the CLI has no such verbs yet.
+`find` covers the "which ids answer to this name" question until `refs` lands.
 
 ### 4.4 Verify
 
@@ -201,7 +210,8 @@ el doc <path> [--offline] [--raw] [--json]
 
 Fetches via `$EL_FETCH` (default `curl -fsSL`), caches by URL digest for 7 days under
 `~/.cache/el/` (`FR-40`, `FR-41`). `--offline` never spawns the fetcher and exits 4 on a
-miss with the exact command that would warm the cache.
+miss with the exact command that would warm the cache. `search` and `doc` are specified but
+unbuilt: the CLI has no such verbs yet.
 
 ### 4.7 Self
 
@@ -219,8 +229,13 @@ the journal and must reproduce it byte for byte (`FR-34`).
 `--adopt` records a drifted file as an opaque module (`FR-37`).
 
 `skill` prints a self-contained usage guide (≤ 150 lines) designed to be pasted into an
-agent's context (`FR-47`). It is generated from the same table as `--help`, so it cannot
-drift from the code.
+agent's context (`FR-47`), and `--help` prints the same table. Both are specified but
+unbuilt: every page of this document is currently the only command reference, and an
+unknown verb names the verbs that exist rather than pointing at a command that does not.
+
+`version` prints `el <package version>` from `Cargo.toml`. The milestone is not in the
+binary: it lives in `README.md` and `docs/PLAN.md`, and a number kept in two places is a
+number that disagrees.
 
 ---
 
@@ -236,7 +251,7 @@ Success:
   "seq": 42,
   "changed": [{"op": "add", "id": "el-0007", "alias": "core::plan::apply"}],
   "gate": {"tier": "check", "new": 0, "fixed": 1, "existing": 5, "verdict": "ok", "ms": 812},
-  "notes": ["rust-analyzer 2026-10-13 used for rename"]
+  "notes": ["el: rewrote 1 file"]
 }
 ```
 

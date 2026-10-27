@@ -14,13 +14,14 @@ hello
 $ el undo && el log
 ```
 
-**Design status: M8.** `el new`, `add`, `edit`, `rm`, `mv`,
-`run`, `log`, `diff`, `undo`, `redo`, `revert`, `doctor`, `ls`, `tree`, `show`, statement
+**Design status: M8.** `el new`, `add`, `batch`, `edit`, `rm`, `mv`, `run`, `log`, `diff`,
+`undo`, `redo`, `revert`, `doctor`, `ls`, `tree`, `show`, `find`, statement
 insert/edit/reorder, and the split policy work in a real crate, with the lock, inflight
 recovery, drift detection, a content-addressed store, and a body grammar that supplies
 closing braces and semicolons. The default gate is L0 (`model`); `--strict` adds clippy;
-L1 is M9. `make check` is green. The transcript's gate line is the M9 target; the
-`el undo` line is real.
+L1 is M9. Specified but unbuilt: `apply`, `refs`, `explain`, `catalog`, `skill`, `--help`,
+`check`, `test`, `build`, `fix`, `search`, `doc`. `make check` is green. The transcript's
+gate line is the M9 target; the `el undo` line is real.
 
 ---
 
