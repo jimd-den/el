@@ -1,0 +1,6 @@
+# The benchmark fixtures are data: ten tiny crates, prompts and shell checks.
+# Reviewing them line by line costs the reviewer's file budget without finding
+# code defects, and the harness has its own meta test.
+reviews:
+  path_filters:
+    - "!tests/bench/**"
