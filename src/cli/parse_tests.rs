@@ -66,7 +66,7 @@ fn log_reads_a_count() {
 
 #[test]
 fn a_new_crate_can_be_a_library_with_a_policy_file() {
-    let Command::New { path, lib, policy } = parsed("new hello --lib --policy").command else {
+    let Command::New { path, lib, policy, .. } = parsed("new hello --lib --policy").command else {
         panic!("not a new");
     };
 

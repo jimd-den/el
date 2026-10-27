@@ -55,8 +55,8 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
     }
 
     match &parsed.command {
-        Command::New { path, lib, policy } => {
-            create::new(env, &parsed.globals, path, *lib, *policy)
+        Command::New { path, lib, policy, edition } => {
+            create::new(env, &parsed.globals, path, *lib, *policy, edition.as_deref())
         }
         Command::Version => verbs::version(),
         Command::Init { force } => adopt::init(env, parsed.globals.dry_run, *force),

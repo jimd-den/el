@@ -12,6 +12,7 @@
 // live, and the first one is `plan`.
 
 pub mod args;
+pub mod globals;
 pub mod parse;
 mod parse_history;
 mod parse_mutate;

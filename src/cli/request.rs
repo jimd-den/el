@@ -5,35 +5,10 @@
 // `argv` it came from — `el apply` reads a script and then runs each line through
 // the same vocabulary.
 
+pub use super::globals::Globals;
+
 use crate::core::model::kind::Kind;
 use crate::core::model::element::Visibility;
-
-/// The universal flags, in the shape the rest of `el` reads them.
-///
-/// Defaults are stated rather than derived: `color` is on until a command says
-/// otherwise, because only the terminal adapter can tell whether stdout is a TTY.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Globals {
-    pub json: bool,
-    pub quiet: bool,
-    pub dry_run: bool,
-    pub yes: bool,
-    pub fast: bool,
-    pub strict: bool,
-    pub semantic: bool,
-    pub verbose: bool,
-    pub no_color: bool,
-    /// `--root`: run against another crate instead of the current directory.
-    pub root: Option<String>,
-}
-
-impl Globals {
-    /// The colour decision `el` passes to the terminal adapter. `--json` implies
-    /// no colour (`COMMANDS.md` §1), so the flag cannot be forgotten at a call site.
-    pub fn color(&self) -> bool {
-        !self.no_color && !self.json
-    }
-}
 
 /// Where an item's text comes from: a file, stdin to EOF, or a literal
 /// carried by the caller (a batch item's body, which never touches a file).
@@ -133,7 +108,12 @@ pub struct Show {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
-    New { path: String, lib: bool, policy: bool },
+    New {
+        path: String,
+        lib: bool,
+        policy: bool,
+        edition: Option<String>,
+    },
     Init { force: bool },
     Add(Add),
     Edit(Edit),

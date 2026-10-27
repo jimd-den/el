@@ -21,7 +21,22 @@ use crate::core::model::kind::Kind;
 
 pub(crate) const POLICY: &str = "ceiling = 200\nmax_fn_lines = 15\nrequire_preamble = true\nforbid = unsafe\ndeps = none\ngate = check\n";
 
-pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: bool) -> Report {
+pub fn new(
+    env: &Env<'_>,
+    globals: &Globals,
+    path: &str,
+    lib: bool,
+    _policy: bool,
+    edition: Option<&str>,
+) -> Report {
+    if let Some(edition) = edition
+        && edition != "2024"
+    {
+        return Report::fail(
+            "new",
+            error::unsupported("new", &format!("--edition {edition} (only 2024 is built)")),
+        );
+    }
     if globals.dry_run {
         return Report::fail("new", error::unsupported("new", "--dry-run"));
     }

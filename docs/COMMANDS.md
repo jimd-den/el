@@ -64,7 +64,7 @@ Statement ids (`el-0101`) work anywhere an id works. A statement's owner is show
 ### 4.1 Create
 
 ```text
-el new <path> [--lib] [--bin] [--edition 2024] [--policy] [--json]
+el new <path> [--lib] [--edition 2024] [--policy] [--json]
 el init [--force]
 ```
 

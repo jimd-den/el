@@ -39,6 +39,7 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
             path: args.required("new")?,
             lib: args.has("--lib"),
             policy: args.has("--policy"),
+            edition: args.value("--edition")?,
         },
         "init" => Command::Init {
             force: args.has("--force"),

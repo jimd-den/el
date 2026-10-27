@@ -47,8 +47,10 @@ unbuilt: `apply`, `refs`, `explain`, `catalog`, `skill`, `--help`, `check`, `tes
 
 ## The three promises
 
-1. **Verified before committed.** A change either compiles or is not applied. `--dry-run` is a
-   true preview because it is the same transaction, restored.
+1. **Verified before committed.** Under the default compiler gate, a change either compiles or
+   is not applied. `--fast` is the explicit exception: it runs L0 only and can commit a tree the
+   compiler would refuse. `--dry-run` is a true preview because it is the same transaction,
+   restored.
 2. **Exactly reversible.** Content-addressed snapshots; `el undo` restores bytes, not intent
    (and says so).
 3. **Nothing to install but one file.** Zero crates, `std` only. `cargo` is required;
