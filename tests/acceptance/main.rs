@@ -8,6 +8,7 @@ mod corrupt_object_is_detected;
 mod diff_shows_element_changes;
 mod dry_run_is_full_fidelity;
 mod doctor_repair_restores_inflight;
+mod doctor_reports_crate_health;
 mod new_change_truncates_future;
 mod new_ignores_its_own_scratch;
 mod rebuild_from_journal;
