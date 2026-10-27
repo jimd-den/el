@@ -10,6 +10,7 @@ mod dry_run_is_full_fidelity;
 mod doctor_repair_restores_inflight;
 mod new_change_truncates_future;
 mod rebuild_from_journal;
+mod rename_keeps_a_module_qualifier;
 mod revert_appends;
 mod undo_restores_bytes;
 mod diagnostics_map_to_elements;

@@ -107,3 +107,55 @@ fn names_in_use_names_only_what_is_referred_to() {
 
     assert_eq!(names_in_use(&catalog, &names), Some(vec!["apply".to_string()]));
 }
+
+/// A catalog with a module `greet` holding `fn greet`, plus `main` calling
+/// `greet::greet()`: the shape where a name and its module are spelled alike.
+fn module_and_function_named_alike() -> (Catalog, ElId, ElId, ElId) {
+    let mut catalog = Catalog::new();
+    let module = catalog
+        .add_element(&NewElement {
+            kind: Kind::Module,
+            module: "src/greet.rs",
+            signature: "mod greet",
+            visibility: Visibility::Pub,
+        })
+        .expect("add module");
+    let greet = element(&mut catalog, "fn greet()");
+    let main = element(&mut catalog, "fn main()");
+    catalog.add_stmt(main, "greet::greet();").expect("add stmt");
+    (catalog, module, greet, main)
+}
+
+fn only_statement(catalog: &Catalog, owner: ElId) -> String {
+    catalog.children_of(owner)[0].text.clone()
+}
+
+#[test]
+fn renaming_a_function_leaves_the_module_qualifier_alone() {
+    let (mut catalog, _, greet, main) = module_and_function_named_alike();
+    catalog.rename(greet, "salute").expect("rename");
+
+    rename_references(&mut catalog, greet, "greet");
+
+    assert_eq!(only_statement(&catalog, main), "greet::salute();");
+}
+
+#[test]
+fn renaming_a_module_rewrites_its_qualifier() {
+    let (mut catalog, module, _, main) = module_and_function_named_alike();
+    catalog.rename(module, "salute").expect("rename");
+
+    rename_references(&mut catalog, module, "greet");
+
+    assert_eq!(only_statement(&catalog, main), "salute::greet();");
+}
+
+#[test]
+fn renaming_a_function_leaves_a_method_of_the_same_name_alone() {
+    let (mut catalog, apply, caller) = with_caller("plan.apply();");
+    catalog.rename(apply, "dispatch").expect("rename");
+
+    rename_references(&mut catalog, apply, "apply");
+
+    assert_eq!(only_statement(&catalog, caller), "plan.apply();");
+}
