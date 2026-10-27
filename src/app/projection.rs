@@ -85,9 +85,14 @@ pub fn materialize(
 }
 
 /// Put `tree` back on disk exactly: write every blob, then remove every owned
-/// path the tree does not name. Only `src/**` and `Cargo.toml` are owned.
+/// path the tree does not name. Only `src/**` is owned; a tree recorded before the
+/// manifest became unowned can still name it, and restoring that blob would write
+/// over the user's current manifest.
 pub fn restore(env: &super::Env<'_>, tree: &Tree) -> Result<(), Error> {
     for (path, digest) in tree.entries() {
+        if path == "Cargo.toml" {
+            continue;
+        }
         let bytes = env.journal.get_blob(digest).map_err(error::store)?;
         env.fs.write(path, &bytes).map_err(error::filesystem)?;
     }
