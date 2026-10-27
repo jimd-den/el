@@ -108,6 +108,10 @@ fn diag_json(diag: &GateDiagnostic) -> Json {
     fields.push(("col".to_string(), count(diag.col as usize)));
     fields.push(("message".to_string(), text(&diag.message)));
     fields.push(("exact".to_string(), Json::Bool(diag.exact)));
+    fields.push((
+        "first_actionable".to_string(),
+        Json::Bool(diag.first_actionable),
+    ));
     Json::Object(fields)
 }
 

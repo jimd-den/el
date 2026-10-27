@@ -33,6 +33,9 @@ pub struct GateDiagnostic {
     pub message: String,
     /// False when the diagnostic fell back to file/line attribution.
     pub exact: bool,
+    /// Exactly one new diagnostic is marked on a rejection: the one attributed to
+    /// an element the change touched, or the first exact one when none was.
+    pub first_actionable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -95,10 +95,16 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
         Err(error) => return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error),
     };
     let ms = started.elapsed().as_millis() as u64;
+    let touched: Vec<crate::core::model::id::ElId> = prepared
+        .changed
+        .iter()
+        .filter_map(|change| crate::core::model::id::ElId::parse(&change.id))
+        .collect();
     let judged = outcome::GateVerdict {
         tier: prepared.tier,
         delta: &evaluation.delta,
         catalog: &prepared.catalog,
+        touched: &touched,
     };
 
     if mutation.dry_run {
@@ -149,6 +155,7 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
         notes.extend(outcome::diagnostic_lines(
             &prepared.catalog,
             &evaluation.delta.new,
+            &touched,
         ));
     }
 

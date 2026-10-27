@@ -271,7 +271,8 @@ Failure:
       "code": "E0308", "level": "error",
       "el": "el-0102", "owner": "el-0007",
       "path": "src/core/plan.rs", "line": 41, "col": 9,
-      "message": "mismatched types: expected u32, found &u32", "exact": true
+      "message": "mismatched types: expected u32, found &u32", "exact": true,
+      "first_actionable": true
     }]
   }
 }
@@ -279,7 +280,7 @@ Failure:
 
 Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `error.hint`, `seq`,
 `changed[].op`, `changed[].id`, `gate.*`,
-`diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
+`diagnostics[].{code,level,el,owner,path,line,col,message,exact,first_actionable}`.
 A diagnostic the compiler gives no code for — a parse error — reports `uncoded`, never an
 empty string, because `code` is part of the diagnostic's identity.
 

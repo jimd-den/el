@@ -9,6 +9,7 @@ use crate::core::gate::{Delta, Level, Tier};
 use crate::core::history::entry::Entry;
 use crate::core::history::tree::Tree;
 use crate::core::model::catalog::Catalog;
+use crate::core::model::id::ElId;
 
 #[path = "outcome/diagnostics.rs"]
 mod diagnostics;
@@ -23,6 +24,9 @@ pub struct GateVerdict<'a> {
     pub tier: Tier,
     pub delta: &'a Delta,
     pub catalog: &'a Catalog,
+    /// The elements this change edited, added or moved: the first actionable
+    /// diagnostic is chosen from them before the rest.
+    pub touched: &'a [ElId],
 }
 
 /// A change the gate refused: the tree restored, the attempt journaled as
@@ -69,8 +73,8 @@ pub fn reject(
         cmd,
         Error { code: "gate.rejected", exit: Exit::Gate, message },
     );
-    report.gate = Some(gate_report(verdict.tier, verdict.delta, "rejected", ms));
-    report.lines = diagnostics::lines(verdict.catalog, &verdict.delta.new);
+    report.gate = Some(gate_report(verdict.tier, verdict.delta, "rejected", ms, verdict.touched));
+    report.lines = diagnostics::lines(verdict.catalog, &verdict.delta.new, verdict.touched);
     report.notes = vec![format!(
         "el: no files changed; history unchanged (attempt recorded as seq {}, gate=rejected:{new})",
         entry.seq
@@ -122,8 +126,8 @@ pub fn preview(
             },
         )
     };
-    report.gate = Some(gate_report(verdict.tier, verdict.delta, "preview", ms));
-    report.lines = diagnostics::lines(verdict.catalog, &verdict.delta.new);
+    report.gate = Some(gate_report(verdict.tier, verdict.delta, "preview", ms, verdict.touched));
+    report.lines = diagnostics::lines(verdict.catalog, &verdict.delta.new, verdict.touched);
     report.notes = vec![format!(
         "el: dry run — no files changed; history unchanged (preview recorded as seq {})",
         entry.seq
