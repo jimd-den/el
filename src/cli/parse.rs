@@ -9,6 +9,14 @@
 use super::args::{Args, Usage};
 use super::request::{Command, Globals, Mv, Parsed};
 
+/// Every verb this parser dispatches, for the one message that has to name them.
+/// Kept beside the table it describes: `every_listed_verb_is_dispatched` fails if
+/// the two drift apart.
+pub const VERBS: &[&str] = &[
+    "new", "init", "add", "batch", "edit", "rm", "mv", "run", "log", "version", "ls", "tree",
+    "show", "find", "diff", "undo", "redo", "revert", "doctor",
+];
+
 /// Parse a whole command line.
 pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
     let args = Args::split(argv)?;
@@ -51,7 +59,10 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
                 None => {
                     return Err(Usage::new(
                         "usage.unknown_verb",
-                        format!("{other:?} is not a verb; try `el skill`"),
+                        format!(
+                            "{other:?} is not a verb; el knows {}",
+                            VERBS.join(" ")
+                        ),
                     ));
                 }
             },

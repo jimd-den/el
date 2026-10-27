@@ -14,9 +14,65 @@ fn parsed(line: &str) -> Parsed {
     parse(&argv).unwrap_or_else(|error| panic!("{line:?}: {error}"))
 }
 
+fn parsed_argv(argv: &[&str]) -> Parsed {
+    let argv: Vec<String> = argv.iter().map(|word| word.to_string()).collect();
+    parse(&argv).unwrap_or_else(|error| panic!("{argv:?}: {error}"))
+}
+
 fn refused(line: &str) -> Usage {
     let argv: Vec<String> = line.split_whitespace().map(str::to_string).collect();
     parse(&argv).expect_err(&format!("{line:?} was accepted"))
+}
+
+#[test]
+fn an_add_carries_every_flag_it_was_given() {
+    // Spelled as argv, not split on whitespace: `--sig` takes one shell-quoted
+    // word, and `fn_greet(` must not swallow the next flag. The old one-line
+    // spelling did exactly that and tested the typo instead of the parser.
+    let command = parsed_argv(&[
+        "add",
+        "fn",
+        "greet",
+        "--in",
+        "src/greet.rs",
+        "--vis",
+        "pub",
+        "--sig",
+        "fn_greet(",
+        "--body",
+        "-",
+    ])
+    .command;
+
+    let Command::Add(add) = command else {
+        panic!("not an add");
+    };
+    assert_eq!(add.kind, Kind::Function);
+    assert_eq!(add.name, "greet");
+    assert_eq!(add.module.as_deref(), Some("src/greet.rs"));
+    assert_eq!(add.visibility, Some(Visibility::Pub));
+    assert_eq!(add.signature.as_deref(), Some("fn_greet("));
+    assert_eq!(add.body, Some(Source::Stdin));
+}
+
+#[test]
+fn add_mod_takes_a_path_as_its_subject() {
+    let Command::Add(add) = parsed("add mod src/greet.rs").command else {
+        panic!("not an add");
+    };
+
+    assert_eq!(add.kind, Kind::Module);
+    assert_eq!(add.name, "src/greet.rs");
+    assert_eq!(add.module, None);
+}
+
+#[test]
+fn a_body_can_come_from_a_file_instead_of_stdin() {
+    let Command::Add(add) = parsed("add fn f --body body.rs").command else {
+        panic!("not an add");
+    };
+
+    assert_eq!(add.body, Some(Source::File("body.rs".to_string())));
 }
 
 #[test]
