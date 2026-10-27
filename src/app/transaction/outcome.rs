@@ -14,6 +14,7 @@ use crate::core::model::id::ElId;
 #[path = "outcome/diagnostics.rs"]
 mod diagnostics;
 
+pub use diagnostics::gate_from_diagnostics;
 pub use diagnostics::lines as diagnostic_lines;
 
 use diagnostics::gate_report;

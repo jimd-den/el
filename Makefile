@@ -8,4 +8,6 @@ lint:
 	cargo clippy --all-targets -- -D warnings
 typecheck:
 	cargo check --all-targets
-check: budget test lint typecheck
+dogfood:
+	cargo run -q -- check --root .
+check: budget test lint typecheck dogfood

@@ -15,6 +15,9 @@ use crate::core::history::entry::{Entry, Op};
 use crate::core::history::object;
 use std::time::Instant;
 
+pub(crate) use gate::{diagnostics, select};
+pub(crate) use outcome::{diagnostic_lines, gate_from_diagnostics};
+
 mod gate;
 mod outcome;
 mod prepare;

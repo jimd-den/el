@@ -57,6 +57,7 @@ const VERB_LINES: &[(&str, &str, &str)] = &[
     ("redo", "redo", "move head forward"),
     ("revert", "revert <seq>", "append an inverse change"),
     ("doctor", "doctor [--repair|--rebuild]", "crate health, recovery"),
+    ("check", "check [--fast|--strict]", "the compiler's report, no refusal"),
     ("version", "version", "the package version"),
     ("skill", "skill", "this page"),
     ("help", "help [<verb>] | --help", "this page"),

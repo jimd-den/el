@@ -12,6 +12,7 @@ use crate::core::history::entry::Op;
 
 mod apply;
 mod batch;
+mod check;
 mod diff;
 mod doctor;
 mod history;
@@ -20,6 +21,7 @@ mod read;
 
 pub use apply::apply;
 pub use batch::batch;
+pub use check::check;
 pub use diff::diff;
 pub use doctor::doctor;
 pub use history::{redo, revert, undo};

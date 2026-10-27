@@ -87,6 +87,26 @@ fn to_gate_diagnostics(diagnostics: &[Diagnostic], touched: &[ElId]) -> Vec<Gate
         .collect()
 }
 
+/// A report with no baseline: every diagnostic is `existing`, because `el check`
+/// reports the current tree rather than a change. Used by `check`, not the gate.
+pub fn gate_from_diagnostics(
+    tier: Tier,
+    diagnostics: &[Diagnostic],
+    verdict: &str,
+    ms: u64,
+    touched: &[ElId],
+) -> Gate {
+    Gate {
+        tier: tier.as_str().to_string(),
+        new: 0,
+        fixed: 0,
+        existing: diagnostics.len(),
+        verdict: verdict.to_string(),
+        ms,
+        diagnostics: to_gate_diagnostics(diagnostics, touched),
+    }
+}
+
 pub(super) fn gate_report(
     tier: Tier,
     delta: &Delta,

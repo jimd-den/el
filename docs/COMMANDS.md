@@ -185,12 +185,17 @@ el run   [-- <program args>] [--json]
 el fix   <id> (--list | --apply <code>:<n>) [--json]
 ```
 
-`check`, `test`, `build` and `fix` are specified but unbuilt: the CLI has no
-such verbs yet. `run` does **not** gate first — after drift refusal, disk
-equals the head projection, so a gate would judge an empty delta; ambient
-files outside the projection (such as `build.rs`) are surfaced by `cargo run`
-itself. When `check` lands, its job is diagnostics reporting plus baseline
-writing, not refusal (ADR-0026).
+`check` is built: it runs the tier the policy selects (or `--fast`/`--strict`), reports every
+diagnostic the compiler gave, and writes nothing — reporting, not refusal (ADR-0026). It exits
+3 when an error is present, 0 otherwise. With no catalog (a plain Cargo crate) diagnostics are
+un-attributed and the page says so; with a catalog the same span map the gate uses attributes
+them. `gate.new` and `gate.fixed` are 0 because there is no baseline comparison yet; the set is
+in `gate.diagnostics` and counted in `gate.existing`. Baseline writing after `check` is
+deferred.
+`test`, `build` and `fix` are specified but unbuilt: the CLI has no such verbs yet. `run` does
+**not** gate first — after drift refusal, disk equals the head projection, so a gate would
+judge an empty delta; ambient files outside the projection (such as `build.rs`) are surfaced
+by `cargo run` itself.
 
 `fix` lists or applies `rust-analyzer` code actions for diagnostics in that element
 (`FR-54`). Applying is a normal transaction: snapshot, edit, gate, commit or restore.
@@ -300,7 +305,7 @@ Error codes are namespaced and stable:
 `usage.exists`, `model.duplicate_alias`, `model.unknown_ref`, `model.cross_body_move`,
 `model.unbalanced`, `model.bad_ident`, `model.ceiling`, `model.fn_budget`, `model.preamble`,
 `model.forbidden`, `model.dep_denied`, `model.dangling_ref`, `model.bad_stmt`, `gate.rejected`,
-`gate.would_reject`, `env.not_a_crate`, `env.drift`, `env.bad_policy`, `env.io`, `env.corrupt`,
+`gate.would_reject`, `gate.failed`, `env.not_a_crate`, `env.not_a_project`, `env.drift`, `env.bad_policy`, `env.io`, `env.corrupt`,
 `env.missing_tool`, `env.tool_failed`, `env.timeout`, `env.run_failed`, `env.offline_miss`,
 `conflict.locked`, `notfound.element`, `notfound.sequence`, `ra.timeout`, `internal.panic`.
 

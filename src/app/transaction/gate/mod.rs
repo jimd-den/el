@@ -16,6 +16,17 @@ mod run;
 
 pub(crate) use baseline::write_baseline;
 
+/// The full diagnostic set a tier reports, with no baseline and no delta. `el
+/// check` uses this; a transaction uses `evaluate` so it can compare.
+pub(crate) fn diagnostics(
+    env: &Env<'_>,
+    tier: Tier,
+    catalog: &Catalog,
+    projection: &Projection,
+) -> Result<Vec<Diagnostic>, Error> {
+    run::run_tier(env, tier, catalog, projection)
+}
+
 /// What the gate needs from the prepared change. Lifetimes tie every borrowed
 /// piece to the transaction, never to a shorter scope.
 pub struct Input<'e, 'p> {
