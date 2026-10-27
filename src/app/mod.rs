@@ -10,6 +10,7 @@
 // are adapters reading the same `Report`, which is what keeps `--json` from being a
 // second code path through every verb.
 
+pub mod adopt;
 pub mod change;
 pub mod create;
 pub mod error;
@@ -58,10 +59,7 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
             create::new(env, &parsed.globals, path, *lib, *policy)
         }
         Command::Version => verbs::version(),
-        Command::Init { .. } => Report::fail(
-            "init",
-            error::unsupported("init", "existing crate adoption (M12)"),
-        ),
+        Command::Init { force } => adopt::init(env, parsed.globals.dry_run, *force),
         Command::Add(add) => verbs::add(env, &parsed.globals, add.clone(), stdin),
         Command::Edit(edit) => verbs::edit(env, &parsed.globals, edit.clone(), stdin),
         Command::Rm { ids, cascade } => {

@@ -38,7 +38,7 @@ pub fn guide() -> String {
 /// `parse::VERBS`; the test below refuses drift in either direction.
 const VERB_LINES: &[(&str, &str, &str)] = &[
     ("new", "new <path> [--lib] [--policy]", "write a crate"),
-    ("init", "init [--force]", "adopt an existing crate (not built)"),
+    ("init", "init", "adopt an existing crate as opaque modules"),
     ("add", "add <kind> <name> [--in] [--body] …", "add an element or statement"),
     ("batch", "batch", "JSON adds as one transaction"),
     ("apply", "apply [<file>|-]", "many change kinds, one transaction"),

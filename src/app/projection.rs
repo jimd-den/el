@@ -17,9 +17,21 @@ use std::collections::BTreeSet;
 pub fn tree_of(env: &super::Env<'_>, projection: &Projection) -> Result<Tree, Error> {
     let mut entries = Vec::with_capacity(projection.files.len());
     for file in &projection.files {
+        // An adopted crate owns its manifest: rewriting a user's Cargo.toml is
+        // not adoption. `el new` wrote the rendered one, so it matches and stays
+        // owned; a manifest that differs is recorded as it is, so a tree restore
+        // puts the same bytes back and no change ever rewrites it.
+        let bytes = if file.path == "Cargo.toml" {
+            env.fs
+                .read("Cargo.toml")
+                .map_err(error::filesystem)?
+                .filter(|bytes| bytes != file.text.as_bytes())
+        } else {
+            None
+        };
         let digest = env
             .journal
-            .put_blob(file.text.as_bytes())
+            .put_blob(bytes.as_deref().unwrap_or(file.text.as_bytes()))
             .map_err(error::store)?;
         entries.push((file.path.clone(), digest));
     }
@@ -111,6 +123,9 @@ pub fn check_drift(
     let mut notes = Vec::new();
 
     for file in &projection.files {
+        if file.path == "Cargo.toml" {
+            continue;
+        }
         let Some(bytes) = env.fs.read(&file.path).map_err(error::filesystem)? else {
             return Err(drift(&file.path, "is missing"));
         };

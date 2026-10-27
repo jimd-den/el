@@ -19,7 +19,7 @@ use crate::core::model::change::Change;
 use crate::core::model::element::{BodyMode, Visibility};
 use crate::core::model::kind::Kind;
 
-const POLICY: &str = "ceiling = 200\nmax_fn_lines = 15\nrequire_preamble = true\nforbid = unsafe\ndeps = none\ngate = check\n";
+pub(crate) const POLICY: &str = "ceiling = 200\nmax_fn_lines = 15\nrequire_preamble = true\nforbid = unsafe\ndeps = none\ngate = check\n";
 
 pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: bool) -> Report {
     if globals.dry_run {

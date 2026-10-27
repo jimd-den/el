@@ -112,6 +112,9 @@ fn drift(env: &Env<'_>) -> String {
     };
     let projection = crate::core::render::render(&catalog, &env.crate_name);
     for file in &projection.files {
+        if file.path == "Cargo.toml" {
+            continue;
+        }
         match env.fs.read(&file.path) {
             Ok(Some(bytes)) if bytes == file.text.as_bytes() => continue,
             Ok(Some(_)) => return format!("{} differs from the catalog", file.path),

@@ -14,6 +14,7 @@
 // refuse that body with `model.unbalanced` a moment later.
 
 use crate::core::model::catalog::Catalog;
+use crate::core::model::element::BodyMode;
 use crate::core::model::change::Change;
 use crate::core::model::id::ElId;
 use crate::core::plan::policy::Policy;
@@ -24,6 +25,7 @@ use crate::core::plan::violation::{Code, Violation};
 pub fn request(change: &Change, catalog: &Catalog, policy: &Policy) -> Vec<Violation> {
     let mut found = Vec::new();
 
+    opaque_change(change, catalog, &mut found);
     match change {
         Change::MoveStmt { id, to } => cross_body_move(*id, *to, catalog, &mut found),
         Change::Remove { id } => dangling_ref(*id, catalog, &mut found),
@@ -35,6 +37,42 @@ pub fn request(change: &Change, catalog: &Catalog, policy: &Policy) -> Vec<Viola
     }
 
     found
+}
+
+/// An element added to an adopted file would exist in the catalog and not in the
+/// file: the opaque module renders its stored bytes and nothing else. Refuse it
+/// and name the file-level edit that does work.
+fn opaque_change(change: &Change, catalog: &Catalog, out: &mut Vec<Violation>) {
+    let target = match change {
+        Change::AddElement { module, .. } | Change::MoveElement { module, .. } => {
+            opaque_file(module, catalog)
+        }
+        Change::AddStmt { owner, .. } => catalog.find(*owner).filter(|element| {
+            element.mode == BodyMode::Opaque
+        }),
+        _ => None,
+    };
+    if let Some(module) = target {
+        out.push(Violation::at(
+            Code::Opaque,
+            module.id,
+            format!(
+                "{} is opaque; edit the whole file with `el edit {} --body <file> --body-mode opaque`",
+                module.module, module.id
+            ),
+        ));
+    }
+}
+
+fn opaque_file<'a>(
+    path: &str,
+    catalog: &'a Catalog,
+) -> Option<&'a crate::core::model::element::Element> {
+    catalog.elements.iter().find(|element| {
+        element.kind == crate::core::model::kind::Kind::Module
+            && element.module == path
+            && element.mode == BodyMode::Opaque
+    })
 }
 
 fn cross_body_move(id: ElId, to: ElId, catalog: &Catalog, out: &mut Vec<Violation>) {

@@ -71,9 +71,13 @@ el init [--force]
 `new` writes a crate with `src/main.rs` (or `src/lib.rs`), an empty manifest, `el.policy`
 with the `AGENTS.md` defaults, `.gitignore`, and
 `.el/` seeded with entry seq 1 (`init`) followed by the root module's `add` entry — the two
-entries are one command's history, not two commands. `init` adopts an existing directory:
-everything under `src/` is imported as opaque modules (`ADR-0009`), so nothing is lost and
-nothing is silently rewritten. `init` is not in M6.
+entries are one command's history, not two commands. `init` adopts an existing directory: everything under `src/` is
+imported as one opaque module per file (`ADR-0009`), so nothing is lost and nothing is
+silently rewritten. It writes no projection: it verifies the render is byte-for-byte what is
+on disk before recording the tree. `el.policy` and `.gitignore` are written only if absent, and
+the manifest is never rewritten. Element-level `add`/`mv` into an adopted file is refused
+(`model.opaque`); edit the whole file with `el edit <module> --body <file> --body-mode opaque`.
+`--force` and `--dry-run` are refused.
 
 ### 4.2 Mutate
 
@@ -304,7 +308,8 @@ Error codes are namespaced and stable:
 `usage.bad_script`,
 `usage.exists`, `model.duplicate_alias`, `model.unknown_ref`, `model.cross_body_move`,
 `model.unbalanced`, `model.bad_ident`, `model.ceiling`, `model.fn_budget`, `model.preamble`,
-`model.forbidden`, `model.dep_denied`, `model.dangling_ref`, `model.bad_stmt`, `gate.rejected`,
+`model.forbidden`, `model.dep_denied`, `model.dangling_ref`, `model.bad_stmt`, `model.opaque`,
+`gate.rejected`,
 `gate.would_reject`, `gate.failed`, `env.not_a_crate`, `env.not_a_project`, `env.drift`, `env.bad_policy`, `env.io`, `env.corrupt`,
 `env.missing_tool`, `env.tool_failed`, `env.timeout`, `env.run_failed`, `env.offline_miss`,
 `conflict.locked`, `notfound.element`, `notfound.sequence`, `ra.timeout`, `internal.panic`.

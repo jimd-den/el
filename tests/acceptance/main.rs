@@ -40,3 +40,4 @@ mod one_diagnostic_is_first_actionable;
 mod apply_is_atomic;
 mod explain_names_what_uses_it;
 mod check_reports_without_a_catalog;
+mod init_adopts_without_touching_bytes;

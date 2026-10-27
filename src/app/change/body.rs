@@ -85,7 +85,7 @@ pub fn element_body(
 fn opaque(text: &str) -> Body {
     Body {
         statements: vec![BodyStmt {
-            text: text.trim_end().to_string(),
+            text: text.to_string(),
             children: Vec::new(),
         }],
     }
