@@ -129,3 +129,28 @@
         assert!(paths.contains(&"src/a/mod.rs"), "{paths:?}");
         assert!(!paths.contains(&"src/a.rs"), "{paths:?}");
     }
+
+    #[test]
+    fn a_mod_rs_parent_declares_its_child() {
+        let mut catalog = Catalog::new();
+        catalog
+            .add_element(&NewElement {
+                kind: Kind::Module,
+                module: "src/a/mod.rs",
+                signature: "mod a",
+                visibility: Visibility::Private,
+            })
+            .expect("module");
+        catalog
+            .add_element(&NewElement {
+                kind: Kind::Function,
+                module: "src/a/b.rs",
+                signature: "fn f",
+                visibility: Visibility::Private,
+            })
+            .expect("item");
+
+        let tree = Tree::of(&catalog);
+
+        assert_eq!(tree.get("src/a/mod.rs").expect("a").children, vec!["b"]);
+    }

@@ -45,7 +45,7 @@ pub fn request(change: &Change, catalog: &Catalog, policy: &Policy) -> Vec<Viola
 fn opaque_change(change: &Change, catalog: &Catalog, out: &mut Vec<Violation>) {
     let target = match change {
         Change::AddElement { module, .. } | Change::MoveElement { module, .. } => {
-            opaque_file(module, catalog)
+            opaque_file(module, catalog).or_else(|| opaque_ancestor(module, catalog))
         }
         Change::AddStmt { owner, .. } => catalog.find(*owner).filter(|element| {
             element.mode == BodyMode::Opaque
@@ -62,6 +62,26 @@ fn opaque_change(change: &Change, catalog: &Catalog, out: &mut Vec<Violation>) {
             ),
         ));
     }
+}
+
+/// An opaque file that would have to declare the new descendant but cannot be
+/// updated by an element change: `src/a/b.rs` needs `mod b;` in `src/a.rs` or
+/// `src/a/mod.rs`, and either may be opaque.
+fn opaque_ancestor<'a>(
+    path: &str,
+    catalog: &'a Catalog,
+) -> Option<&'a crate::core::model::element::Element> {
+    let stem = path.strip_suffix(".rs")?;
+    let parts: Vec<&str> = stem.split('/').collect();
+    for end in (1..parts.len()).rev() {
+        let prefix = parts[..end].join("/");
+        for candidate in [format!("{prefix}.rs"), format!("{prefix}/mod.rs")] {
+            if let Some(module) = opaque_file(&candidate, catalog) {
+                return Some(module);
+            }
+        }
+    }
+    None
 }
 
 fn opaque_file<'a>(

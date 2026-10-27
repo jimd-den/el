@@ -39,14 +39,14 @@ pub fn init(env: &Env<'_>, dry_run: bool, force: bool) -> Report {
         Ok(files) => files,
         Err(error) => return Report::fail("init", error),
     };
-    let catalog = match adopt(env, &files) {
-        Ok(catalog) => catalog,
+    let (catalog, texts) = match adopt(env, &files) {
+        Ok(adopted) => adopted,
         Err(error) => return Report::fail("init", error),
     };
-    if let Err(error) = verify(env, &catalog, &files) {
+    if let Err(error) = verify(env, &catalog, &texts) {
         return Report::fail("init", error);
     }
-    match commit::commit(env, &catalog, &files) {
+    match commit::commit(env, &catalog, &texts) {
         Ok(count) => {
             let mut report = Report::new("init");
             report.lines = vec![format!("adopted {count} files as opaque modules")];
@@ -72,8 +72,9 @@ fn sources(env: &Env<'_>) -> Result<Vec<String>, Error> {
     Ok(files)
 }
 
-fn adopt(env: &Env<'_>, files: &[String]) -> Result<Catalog, Error> {
+fn adopt(env: &Env<'_>, files: &[String]) -> Result<(Catalog, Vec<(String, String)>), Error> {
     let mut catalog = Catalog::new();
+    let mut texts = Vec::with_capacity(files.len());
     for path in files {
         let bytes = env.fs.read(path).map_err(error::filesystem)?;
         let Some(bytes) = bytes else {
@@ -97,18 +98,32 @@ fn adopt(env: &Env<'_>, files: &[String]) -> Result<Catalog, Error> {
         if let Some(element) = catalog.find_mut(id) {
             element.mode = BodyMode::Opaque;
         }
+        texts.push((path.clone(), text));
     }
-    Ok(catalog)
+    Ok((catalog, texts))
 }
 
-fn verify(env: &Env<'_>, catalog: &Catalog, files: &[String]) -> Result<(), Error> {
+fn verify(
+    env: &Env<'_>,
+    catalog: &Catalog,
+    texts: &[(String, String)],
+) -> Result<(), Error> {
     let projection = render(catalog, &env.crate_name);
-    for path in files {
+    let known: std::collections::BTreeSet<&str> =
+        texts.iter().map(|(path, _)| path.as_str()).collect();
+    for file in projection.files.iter().filter(|file| file.path.ends_with(".rs")) {
+        if !known.contains(file.path.as_str()) {
+            return Err(error::corrupt(format!(
+                "adopting would invent {}; this crate layout is not supported",
+                file.path
+            )));
+        }
+    }
+    for (path, text) in texts {
         let file = projection
             .file(path)
             .ok_or_else(|| error::corrupt(format!("{path} did not render")))?;
-        let disk = env.fs.read(path).map_err(error::filesystem)?;
-        if disk.as_deref() != Some(file.text.as_bytes()) {
+        if file.text != *text {
             return Err(error::corrupt(format!(
                 "adopting {path} would change its bytes; refusing"
             )));

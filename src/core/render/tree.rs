@@ -105,7 +105,7 @@ impl Tree {
             let parent = if parent.is_empty() {
                 root.clone()
             } else {
-                file_for(&parent)
+                known_file(&parent, catalog).unwrap_or_else(|| file_for(&parent))
             };
             if let Some(node) = nodes.get_mut(&parent) {
                 node.children.push(name);

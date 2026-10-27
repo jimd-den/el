@@ -9,10 +9,13 @@ use crate::core::history::entry::{Entry, Op};
 use crate::core::history::tree::Tree;
 use crate::core::model::catalog::Catalog;
 
-pub(super) fn commit(env: &Env<'_>, catalog: &Catalog, files: &[String]) -> Result<usize, Error> {
+pub(super) fn commit(
+    env: &Env<'_>,
+    catalog: &Catalog,
+    texts: &[(String, String)],
+) -> Result<usize, Error> {
     write_if_absent(env, "el.policy", POLICY.as_bytes())?;
-    write_if_absent(env, ".gitignore", b".el/\ntarget/\ntmp/\n")?;
-    env.journal.stamp_version().map_err(error::store)?;
+    ensure_gitignore(env)?;
 
     let empty = Tree::new(Vec::new()).expect("an empty tree");
     let empty_digest = env.journal.put_tree(&empty).map_err(error::store)?;
@@ -33,10 +36,9 @@ pub(super) fn commit(env: &Env<'_>, catalog: &Catalog, files: &[String]) -> Resu
     env.journal.set_catalog(&empty_catalog).map_err(error::store)?;
     env.journal.put_catalog(1, &empty_catalog).map_err(error::store)?;
 
-    let mut entries = Vec::with_capacity(files.len());
-    for path in files {
-        let bytes = env.fs.read(path).map_err(error::filesystem)?.unwrap_or_default();
-        let digest = env.journal.put_blob(&bytes).map_err(error::store)?;
+    let mut entries = Vec::with_capacity(texts.len());
+    for (path, text) in texts {
+        let digest = env.journal.put_blob(text.as_bytes()).map_err(error::store)?;
         entries.push((path.clone(), digest));
     }
     let tree = Tree::new(entries)
@@ -51,14 +53,32 @@ pub(super) fn commit(env: &Env<'_>, catalog: &Catalog, files: &[String]) -> Resu
         from: empty_digest,
         to: digest,
         gate: "skip".to_string(),
-        msg: format!("adopted {} files as opaque modules", files.len()),
+        msg: format!("adopted {} files as opaque modules", texts.len()),
     };
     let text = catalog.encode();
     env.journal.set_catalog(&text).map_err(error::store)?;
     env.journal.put_catalog(2, &text).map_err(error::store)?;
     env.journal.put_entry(&entry).map_err(error::store)?;
     env.journal.set_head(2).map_err(error::store)?;
-    Ok(files.len())
+    // Last: a failure above leaves no version stamp, so `init` can be retried.
+    env.journal.stamp_version().map_err(error::store)?;
+    Ok(texts.len())
+}
+
+fn ensure_gitignore(env: &Env<'_>) -> Result<(), Error> {
+    let existing = env.fs.read(".gitignore").map_err(error::filesystem)?;
+    let mut text = match existing {
+        None => ".el/\ntarget/\ntmp/\n".to_string(),
+        Some(bytes) => String::from_utf8(bytes)
+            .map_err(|_| error::corrupt(".gitignore is not UTF-8"))?,
+    };
+    if !text.lines().any(|line| line.trim() == ".el/" || line.trim() == ".el") {
+        if !text.is_empty() && !text.ends_with('\n') {
+            text.push('\n');
+        }
+        text.push_str(".el/\n");
+    }
+    env.fs.write(".gitignore", text.as_bytes()).map_err(error::filesystem)
 }
 
 fn write_if_absent(env: &Env<'_>, path: &str, bytes: &[u8]) -> Result<(), Error> {

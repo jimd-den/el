@@ -165,6 +165,14 @@ fn walk(root: &Path, base: &Path, found: &mut Vec<String>) -> Result<(), Error> 
         let entry =
             entry.map_err(|e| Error::new(base.display().to_string(), Kind::from_io(e.kind())))?;
         let path = entry.path();
+        let file_type = entry.file_type().map_err(|e| {
+            Error::new(path.display().to_string(), Kind::from_io(e.kind()))
+        })?;
+        // A symlink is a path out of the crate that looks like one inside it.
+        // The store and an adopted projection never follow one.
+        if file_type.is_symlink() {
+            continue;
+        }
         let relative = match path.strip_prefix(root) {
             Ok(relative) => relative.to_string_lossy().into_owned(),
             Err(_) => continue,
@@ -173,7 +181,7 @@ fn walk(root: &Path, base: &Path, found: &mut Vec<String>) -> Result<(), Error> 
         if relative == "tmp" || relative.starts_with("tmp/") {
             continue;
         }
-        if path.is_dir() {
+        if file_type.is_dir() {
             walk(root, &path, found)?;
         } else {
             found.push(relative);
