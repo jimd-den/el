@@ -102,7 +102,15 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
     };
 
     if mutation.dry_run {
-        return outcome::preview(env, &prepared.old_tree, &mut entry, mutation.cmd, ms, judged);
+        return outcome::preview(
+            env,
+            &prepared.old_tree,
+            &mut entry,
+            mutation.cmd,
+            ms,
+            judged,
+            gate::may_commit(prepared.tier, &evaluation.delta),
+        );
     }
     if !gate::may_commit(prepared.tier, &evaluation.delta) {
         return outcome::reject(env, &prepared.old_tree, &mut entry, mutation.cmd, ms, judged);
