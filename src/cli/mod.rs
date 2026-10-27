@@ -17,6 +17,7 @@ mod parse_history;
 mod parse_mutate;
 mod parse_read;
 pub mod request;
+pub mod script;
 pub mod table;
 
 pub use args::{Args, Usage, VALUE_FLAGS};
