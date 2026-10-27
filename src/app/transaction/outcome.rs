@@ -112,15 +112,20 @@ pub fn preview(
             .iter()
             .filter(|diag| diag.level == Level::Error)
             .count();
+        let (count, noun) = if errors > 0 {
+            (errors, "error")
+        } else {
+            (new, "warning")
+        };
         Report::fail(
             cmd,
             Error {
                 code: "gate.would_reject",
                 exit: Exit::Gate,
                 message: format!(
-                    "dry run: the change would be rejected — {} new error{} ({} fixed, {} pre-existing)",
-                    errors,
-                    diagnostics::plural(errors),
+                    "dry run: the change would be rejected — {} new {noun}{} ({} fixed, {} pre-existing)",
+                    count,
+                    diagnostics::plural(count),
                     verdict.delta.fixed.len(),
                     verdict.delta.existing.len()
                 ),
