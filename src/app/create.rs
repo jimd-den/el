@@ -38,6 +38,10 @@ pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: boo
     if let Err(error) = seed(env) {
         return Report::fail("new", error);
     }
+    let manifest = crate::core::render::manifest::render(&env.crate_name);
+    if let Err(error) = env.fs.write("Cargo.toml", manifest.as_bytes()) {
+        return Report::fail("new", error::filesystem(error));
+    }
 
     let root = if lib { "src/lib.rs" } else { "src/main.rs" };
     let keyword = if lib { "lib" } else { "main" };

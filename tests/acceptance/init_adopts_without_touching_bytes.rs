@@ -85,10 +85,12 @@ fn el_edits_an_adopted_file_and_undo_restores_it() {
 
     ok(&output, "edit adopted module");
     assert_eq!(fs::read_to_string(root.join("src/main.rs")).expect("main"), edited);
+    assert_eq!(fs::read_to_string(root.join("Cargo.toml")).expect("manifest"), MANIFEST);
     let run = text(&el(&root, &["run"]));
     assert!(run.contains("edited"), "{run}");
     ok(&el(&root, &["undo"]), "undo");
     assert_eq!(fs::read_to_string(root.join("src/main.rs")).expect("main"), MAIN);
+    assert_eq!(fs::read_to_string(root.join("Cargo.toml")).expect("manifest"), MANIFEST);
 }
 
 #[test]

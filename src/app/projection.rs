@@ -17,21 +17,16 @@ use std::collections::BTreeSet;
 pub fn tree_of(env: &super::Env<'_>, projection: &Projection) -> Result<Tree, Error> {
     let mut entries = Vec::with_capacity(projection.files.len());
     for file in &projection.files {
-        // An adopted crate owns its manifest: rewriting a user's Cargo.toml is
-        // not adoption. `el new` wrote the rendered one, so it matches and stays
-        // owned; a manifest that differs is recorded as it is, so a tree restore
-        // puts the same bytes back and no change ever rewrites it.
-        let bytes = if file.path == "Cargo.toml" {
-            env.fs
-                .read("Cargo.toml")
-                .map_err(error::filesystem)?
-                .filter(|bytes| bytes != file.text.as_bytes())
-        } else {
-            None
-        };
+        // The manifest is not a projection: it belongs to the project, not to the
+        // catalog. `el new` writes it; adoption and every later change leave it
+        // alone. A tree that does not name it is what makes a restore unable to
+        // remove it.
+        if file.path == "Cargo.toml" {
+            continue;
+        }
         let digest = env
             .journal
-            .put_blob(bytes.as_deref().unwrap_or(file.text.as_bytes()))
+            .put_blob(file.text.as_bytes())
             .map_err(error::store)?;
         entries.push((file.path.clone(), digest));
     }
@@ -102,9 +97,6 @@ pub fn restore(env: &super::Env<'_>, tree: &Tree) -> Result<(), Error> {
         if !known.contains(path.as_str()) {
             env.fs.remove(&path).map_err(error::filesystem)?;
         }
-    }
-    if !known.contains("Cargo.toml") {
-        env.fs.remove("Cargo.toml").map_err(error::filesystem)?;
     }
     Ok(())
 }
