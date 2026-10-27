@@ -34,3 +34,4 @@ mod e0601_stays_preexisting;
 mod batch_adds_are_atomic;
 mod body_mode_is_honoured;
 mod default_signature_builds;
+mod skill_is_the_whole_surface;

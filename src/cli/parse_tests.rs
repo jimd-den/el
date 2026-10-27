@@ -86,8 +86,9 @@ fn an_unknown_verb_is_a_usage_error_that_names_itself() {
 fn an_unknown_verb_names_only_verbs_that_exist() {
     let refusal = refused("frobnicate");
 
-    assert!(!refusal.message.contains("skill"), "{refusal}");
-    assert!(refusal.message.contains("show"), "{refusal}");
+    let known = refusal.message.split("el knows ").nth(1).expect("the list");
+    assert!(known.contains("show"), "{refusal}");
+    assert!(known.contains("skill"), "{refusal}");
 }
 
 #[test]

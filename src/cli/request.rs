@@ -151,6 +151,8 @@ pub enum Command {
     Show(Show),
     Find(Find),
     Batch,
+    Skill,
+    Help { verb: Option<String> },
     Version,
 }
 
@@ -176,6 +178,8 @@ impl Command {
             Command::Show(_) => "show",
             Command::Find(_) => "find",
             Command::Batch => "batch",
+            Command::Skill => "skill",
+            Command::Help { .. } => "help",
             Command::Version => "version",
         }
     }

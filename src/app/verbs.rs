@@ -24,6 +24,14 @@ pub use history::{redo, revert, undo};
 pub use inspect::{find, ls, show, tree};
 pub use read::{log, run, version};
 
+/// The one page `el skill`, `el help` and `--help` print. It reads the CLI's own
+/// tables, so the page cannot list a verb the parser refuses.
+pub fn guide(cmd: &'static str) -> Report {
+    let mut report = Report::new(cmd);
+    report.lines = crate::cli::table::guide().lines().map(str::to_string).collect();
+    report
+}
+
 pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
     let split = match load::policy(env) {
         Ok(policy) => policy.split,

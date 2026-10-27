@@ -86,5 +86,7 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
         }
         Command::Find(find) => verbs::find(env, &find.query),
         Command::Batch => verbs::batch(env, &parsed.globals, stdin),
+        Command::Skill => verbs::guide("skill"),
+        Command::Help { .. } => verbs::guide("help"),
     }
 }
