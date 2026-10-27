@@ -17,8 +17,13 @@ pub fn guide() -> String {
     out.push_str("el — build Rust by element\n\n");
     out.push_str("usage: el <verb> [subject] [flags]\n\n");
     out.push_str("verbs\n");
-    for (name, usage, what) in VERB_LINES {
-        let _ = writeln!(out, "  {name:<8} {usage:<42} {what}");
+    for (group, names) in VERB_GROUPS {
+        let _ = writeln!(out, "{group}");
+        for (name, usage, what) in VERB_LINES {
+            if names.contains(name) {
+                let _ = writeln!(out, "  {name:<8} {usage:<42} {what}");
+            }
+        }
     }
     out.push_str("\nkinds\n  mod fn struct enum trait impl const static type use test stmt\n");
     out.push_str("\nuniversal flags\n");
@@ -34,6 +39,18 @@ pub fn guide() -> String {
     out.push_str("\nnot built: refs catalog test build fix search doc\n");
     out
 }
+
+/// Verbs by the task an agent is doing, in the order the page prints them.
+/// A flat catalog past ~15 tools is where selection accuracy falls, so the
+/// page groups by intent — the static form of scoping the toolset per turn.
+/// The test beside this table refuses a verb with no group or two groups.
+const VERB_GROUPS: &[(&str, &[&str])] = &[
+    ("write", &["new", "init", "add", "batch", "apply", "edit", "rm", "mv"]),
+    ("read", &["ls", "tree", "show", "find", "explain", "diff", "log"]),
+    ("history", &["undo", "redo", "revert"]),
+    ("verify", &["run", "check", "doctor"]),
+    ("meta", &["version", "skill", "help"]),
+];
 
 /// Every verb the parser dispatches, with its one-line shape. Kept beside
 /// `parse::VERBS`; the test below refuses drift in either direction.

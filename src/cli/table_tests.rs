@@ -41,6 +41,42 @@ fn the_page_stays_within_its_published_ceiling() {
 }
 
 #[test]
+fn the_page_groups_verbs_by_task() {
+    let page = guide();
+    let groups: &[(&str, &[&str])] = &[
+        ("write", &["new", "init", "add", "batch", "apply", "edit", "rm", "mv"]),
+        ("read", &["ls", "tree", "show", "find", "explain", "diff", "log"]),
+        ("history", &["undo", "redo", "revert"]),
+        ("verify", &["run", "check", "doctor"]),
+        ("meta", &["version", "skill", "help"]),
+    ];
+    for (index, (group, verbs)) in groups.iter().enumerate() {
+        let heading = page
+            .find(&format!("\n{group}\n"))
+            .unwrap_or_else(|| panic!("page has no {group} heading"));
+        let next = groups[index + 1..]
+            .iter()
+            .find_map(|(later, _)| page.find(&format!("\n{later}\n")));
+        for verb in *verbs {
+            let line = page
+                .find(&format!("\n  {verb} "))
+                .unwrap_or_else(|| panic!("page has no {verb} line"));
+            assert!(line > heading, "{verb} is not under {group}");
+            if let Some(next) = next {
+                assert!(line < next, "{verb} is not under {group}");
+            }
+        }
+    }
+    for (name, _, _) in VERB_LINES {
+        let homes = groups
+            .iter()
+            .filter(|(_, verbs)| verbs.contains(name))
+            .count();
+        assert_eq!(homes, 1, "verb {name} must sit in exactly one group");
+    }
+}
+
+#[test]
 fn the_page_is_not_empty_and_has_no_duplicate_verbs() {
     let page = guide();
     assert!(page.contains("usage: el"));
