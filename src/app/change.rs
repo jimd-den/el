@@ -19,6 +19,10 @@ mod body;
 mod head;
 mod describe;
 
+#[cfg(test)]
+#[path = "change_tests.rs"]
+mod change_tests;
+
 pub use describe::describe;
 
 pub fn add(env: &super::Env<'_>, add: Add, stdin: &str, split: Split) -> Result<Change, Error> {
@@ -177,7 +181,18 @@ pub fn parse_id(text: &str) -> Result<ElId, Error> {
     ElId::parse(text).ok_or_else(|| Error {
         code: "notfound.element",
         exit: super::Exit::NotFound,
-        message: format!("{text:?} is not an element id"),
+        message: not_an_id_message(text),
     })
+}
+
+/// The refusal for a subject that is not an id. A single-token subject is a
+/// name the agent remembers, so the message names the command that resolves
+/// it; anything else cannot be one `find` argument, so it gets no pointer.
+pub fn not_an_id_message(text: &str) -> String {
+    if text.is_empty() || text.chars().any(char::is_whitespace) {
+        format!("{text:?} is not an element id")
+    } else {
+        format!("{text:?} is not an element id; resolve a name with `el find {text}`")
+    }
 }
 

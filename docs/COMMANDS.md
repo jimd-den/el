@@ -248,9 +248,9 @@ the journal and must reproduce it byte for byte (`FR-34`).
 `--adopt` records a drifted file as an opaque module (`FR-37`).
 
 `skill` prints a self-contained usage guide (≤ 150 lines) designed to be pasted into an
-agent's context (`FR-47`), and `--help` prints the same table. Both are specified but
-unbuilt: every page of this document is currently the only command reference, and an
-unknown verb names the verbs that exist rather than pointing at a command that does not.
+agent's context (`FR-47`), verbs grouped by task (write, read, history, verify, meta)
+so selection is by intent; `--help` prints the same table. An unknown verb names the
+verbs that exist rather than pointing at a command that does not.
 
 `version` prints `el <package version>` from `Cargo.toml`. The milestone is not in the
 binary: it lives in `README.md` and `docs/PLAN.md`, and a number kept in two places is a

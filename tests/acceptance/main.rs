@@ -42,3 +42,4 @@ mod explain_names_what_uses_it;
 mod check_reports_without_a_catalog;
 mod init_adopts_without_touching_bytes;
 mod new_edition_is_honest;
+mod show_by_name_names_find;

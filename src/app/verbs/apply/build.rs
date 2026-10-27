@@ -77,7 +77,7 @@ fn check_ids(command: &Command, catalog: &Catalog, number: usize) -> Result<(), 
         let Some(id) = ElId::parse(text) else {
             return Err(line_error(
                 number,
-                usage(&format!("{text:?} is not an element id")),
+                usage(&change::not_an_id_message(text)),
             ));
         };
         if catalog.find(id).is_none() && catalog.find_stmt(id).is_none() {
