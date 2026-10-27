@@ -25,9 +25,13 @@ fn every_line_names_a_verb_the_parser_accepts() {
 
 #[test]
 fn every_flag_the_parser_reads_is_on_the_page() {
-    let page = guide();
     for flag in VALUE_FLAGS.iter().chain(BOOL_FLAGS) {
-        assert!(page.contains(flag), "skill omits flag {flag}");
+        assert!(
+            FLAG_LINES
+                .iter()
+                .any(|(line, _)| line.split_whitespace().next() == Some(*flag)),
+            "skill omits flag {flag}"
+        );
     }
 }
 

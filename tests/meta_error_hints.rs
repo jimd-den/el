@@ -16,7 +16,7 @@ fn codes(dir: &Path, found: &mut Vec<String>) {
             continue;
         }
         let text = fs::read_to_string(&path).expect("read file");
-        for marker in ["code: \"", "Error::new(\""] {
+        for marker in ["code: \"", "Error::new(\"", "Usage::new(\""] {
             let mut rest = text.as_str();
             while let Some(at) = rest.find(marker) {
                 let after = &rest[at + marker.len()..];

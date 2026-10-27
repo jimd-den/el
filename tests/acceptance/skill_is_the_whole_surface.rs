@@ -36,7 +36,10 @@ fn skill_names_every_verb_and_flag() {
         assert!(text.split_whitespace().any(|word| word == *verb), "skill omits verb {verb}");
     }
     for flag in el::cli::args::VALUE_FLAGS.iter().chain(el::cli::args::BOOL_FLAGS) {
-        assert!(text.contains(flag), "skill omits flag {flag}");
+        assert!(
+            text.split_whitespace().any(|word| word == *flag),
+            "skill omits flag {flag}"
+        );
     }
     assert!(text.contains("hint"), "skill omits error.hint");
     assert!(text.contains("first_actionable"), "skill omits first_actionable");
