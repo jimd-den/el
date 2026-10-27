@@ -17,7 +17,10 @@ use crate::core::model::catalog::Catalog;
 use crate::core::model::id::ElId;
 use crate::core::text::ident;
 
-use super::Rewrite;
+#[path = "refs/rewrite.rs"]
+mod rewrite;
+
+pub use rewrite::{rename_references, rewrite};
 
 /// The text a reference lives in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,25 +79,6 @@ pub fn references(catalog: &Catalog, name: &str) -> Option<Vec<Reference>> {
     Some(found)
 }
 
-/// `text` with every whole-identifier occurrence of `old` replaced by `new`.
-///
-/// Contract: strings, raw strings, char literals, lifetimes and comments are
-/// untouched; `None` when `text` cannot be scanned.
-pub fn rewrite(text: &str, old: &str, new: &str) -> Option<String> {
-    let hits = ident::occurrences(text, old)?;
-    let mut out = String::with_capacity(text.len());
-    let mut cursor = 0;
-
-    for hit in hits {
-        out.push_str(&text[cursor..hit]);
-        out.push_str(new);
-        cursor = hit + old.len();
-    }
-    out.push_str(&text[cursor..]);
-
-    Some(out)
-}
-
 /// Which names are referred to at all, for a rename that has to happen before a
 /// removal. Sorted and deduplicated so a caller can iterate without sorting.
 pub fn names_in_use(catalog: &Catalog, names: &[String]) -> Option<Vec<String>> {
@@ -106,55 +90,6 @@ pub fn names_in_use(catalog: &Catalog, names: &[String]) -> Option<Vec<String>> 
     in_use.sort();
     in_use.dedup();
     Some(in_use)
-}
-
-/// Rewrite every code reference to `old` as the element's current name, now that
-/// the rename has been applied. Returns the sites that changed, in catalog order.
-///
-/// The renamed element's own head is skipped: its head is a parameter list or an
-/// `impl` target, so a name written there belongs to something else. An
-/// unscannable body produces no rewrite here and is refused by L0 a moment later,
-/// which is a better report than a partial rename.
-pub fn rename_references(catalog: &mut Catalog, renamed: ElId, old: &str) -> Vec<Rewrite> {
-    let Some(new) = catalog.find(renamed).and_then(|element| element.name.clone()) else {
-        return Vec::new();
-    };
-    if new == old {
-        return Vec::new();
-    }
-    let mut changed = Vec::new();
-
-    for stmt in &mut catalog.statements {
-        let Some(after) = rewrite(&stmt.text, old, &new) else {
-            continue;
-        };
-        if after != stmt.text {
-            let before = std::mem::replace(&mut stmt.text, after.clone());
-            changed.push(Rewrite {
-                site: stmt.id,
-                before,
-                after,
-            });
-        }
-    }
-    for element in &mut catalog.elements {
-        if element.id == renamed {
-            continue;
-        }
-        let Some(after) = rewrite(&element.head, old, &new) else {
-            continue;
-        };
-        if after != element.head {
-            let before = std::mem::replace(&mut element.head, after.clone());
-            changed.push(Rewrite {
-                site: element.id,
-                before,
-                after,
-            });
-        }
-    }
-
-    changed
 }
 
 #[cfg(test)]

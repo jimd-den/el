@@ -488,6 +488,12 @@ alternative exists).
 
 ### 8.9 Semantic layer — `rust-analyzer`, out of the box
 
+> **Not built yet.** This whole section is M10 (`UC-9`, `UC-10`). The binary has no LSP
+> adapter, so `--rename` today is the catalog's own token rewrite, `refs`/`explain`/`fix` do
+> not exist, and `--semantic` is refused as unsupported. The requirements below are the
+> contract those milestones will be held to; they are not a description of current
+> behaviour.
+
 The user installs `rust-analyzer` once (`rustup component add rust-analyzer`, or any
 distribution package) and `el` uses it with **no configuration file, no flag, no daemon**.
 It is driven as an LSP server over stdio, one short-lived session per command that needs it.

@@ -16,6 +16,15 @@ pub const VALUE_FLAGS: &[&str] = &[
     "--rename", "-n",
 ];
 
+/// Flags that stand alone. Anything not here and not in `VALUE_FLAGS` is refused,
+/// because a flag the parser quietly ignores is a promise the command line breaks.
+pub const BOOL_FLAGS: &[&str] = &[
+    "--json", "--quiet", "--dry-run", "--yes", "--no-color", "--fast", "--strict",
+    "--semantic", "--verbose", "--lib", "--policy", "--force", "--cascade", "--attic",
+    "--repair", "--rebuild", "--statements", "--source", "--history", "--terse",
+    "--opaque",
+];
+
 /// A command line `el` refuses to understand.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Usage {
@@ -85,6 +94,14 @@ impl Args {
             }
         }
         args.push_pending(&mut pending)?;
+        for (name, _) in &args.flags {
+            if !VALUE_FLAGS.contains(&name.as_str()) && !BOOL_FLAGS.contains(&name.as_str()) {
+                return Err(Usage::new(
+                    "usage.unknown_flag",
+                    format!("{name:?} is not a flag"),
+                ));
+            }
+        }
         Ok(args)
     }
 

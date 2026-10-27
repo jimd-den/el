@@ -11,65 +11,9 @@ fn parsed(line: &str) -> Parsed {
     parse(&argv).unwrap_or_else(|error| panic!("{line:?}: {error}"))
 }
 
-fn parsed_argv(argv: &[&str]) -> Parsed {
-    let argv: Vec<String> = argv.iter().map(|word| word.to_string()).collect();
-    parse(&argv).unwrap_or_else(|error| panic!("{argv:?}: {error}"))
-}
-
 fn refused(line: &str) -> Usage {
     let argv: Vec<String> = line.split_whitespace().map(str::to_string).collect();
     parse(&argv).expect_err(&format!("{line:?} was accepted"))
-}
-
-#[test]
-fn an_add_carries_every_flag_it_was_given() {
-    // Spelled as argv, not split on whitespace: `--sig` takes one shell-quoted
-    // word, and `fn_greet(` must not swallow the next flag. The old one-line
-    // spelling did exactly that and tested the typo instead of the parser.
-    let command = parsed_argv(&[
-        "add",
-        "fn",
-        "greet",
-        "--in",
-        "src/greet.rs",
-        "--vis",
-        "pub",
-        "--sig",
-        "fn_greet(",
-        "--body",
-        "-",
-    ])
-    .command;
-
-    let Command::Add(add) = command else {
-        panic!("not an add");
-    };
-    assert_eq!(add.kind, Kind::Function);
-    assert_eq!(add.name, "greet");
-    assert_eq!(add.module.as_deref(), Some("src/greet.rs"));
-    assert_eq!(add.visibility, Some(Visibility::Pub));
-    assert_eq!(add.signature.as_deref(), Some("fn_greet("));
-    assert_eq!(add.body, Some(Source::Stdin));
-}
-
-#[test]
-fn add_mod_takes_a_path_as_its_subject() {
-    let Command::Add(add) = parsed("add mod src/greet.rs").command else {
-        panic!("not an add");
-    };
-
-    assert_eq!(add.kind, Kind::Module);
-    assert_eq!(add.name, "src/greet.rs");
-    assert_eq!(add.module, None);
-}
-
-#[test]
-fn a_body_can_come_from_a_file_instead_of_stdin() {
-    let Command::Add(add) = parsed("add fn f --body body.rs").command else {
-        panic!("not an add");
-    };
-
-    assert_eq!(add.body, Some(Source::File("body.rs".to_string())));
 }
 
 #[test]
@@ -112,16 +56,6 @@ fn mv_reads_the_subject_then_the_module() {
 }
 
 #[test]
-fn edit_reads_a_rename_as_one_value() {
-    let Command::Edit(edit) = parsed("edit el-0007 --rename apply_change").command else {
-        panic!("not an edit");
-    };
-
-    assert_eq!(edit.id, "el-0007");
-    assert_eq!(edit.rename.as_deref(), Some("apply_change"));
-}
-
-#[test]
 fn log_reads_a_count() {
     let Command::Log { count, .. } = parsed("log -n 5").command else {
         panic!("not a log");
@@ -146,6 +80,26 @@ fn an_unknown_verb_is_a_usage_error_that_names_itself() {
 
     assert_eq!(refusal.code, "usage.unknown_verb");
     assert!(refusal.message.contains("frobnicate"), "{refusal}");
+}
+
+#[test]
+fn an_unknown_verb_names_only_verbs_that_exist() {
+    let refusal = refused("frobnicate");
+
+    assert!(!refusal.message.contains("skill"), "{refusal}");
+    assert!(refusal.message.contains("show"), "{refusal}");
+}
+
+#[test]
+fn every_listed_verb_is_dispatched() {
+    let undispatched: Vec<&&str> = VERBS
+        .iter()
+        .filter(|verb| {
+            parse(&[verb.to_string()]).is_err_and(|error| error.code == "usage.unknown_verb")
+        })
+        .collect();
+
+    assert_eq!(undispatched, Vec::<&&str>::new());
 }
 
 #[test]

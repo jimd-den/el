@@ -78,7 +78,7 @@ pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: boo
 
 fn seed(env: &Env<'_>) -> Result<(), error::Error> {
     env.fs.write("el.policy", POLICY.as_bytes()).map_err(error::filesystem)?;
-    env.fs.write(".gitignore", b".el/\ntarget/\n").map_err(error::filesystem)?;
+    env.fs.write(".gitignore", b".el/\ntarget/\ntmp/\n").map_err(error::filesystem)?;
     env.journal.stamp_version().map_err(error::store)?;
 
     let empty = Tree::new(Vec::new()).expect("an empty tree");

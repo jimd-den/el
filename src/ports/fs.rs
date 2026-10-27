@@ -74,8 +74,9 @@ impl Error {
 }
 
 impl fmt::Display for Error {
+    /// A message fragment, not a line: the edge adds the `el: ` prefix once.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "el: {}: {}", self.path, self.kind)
+        write!(f, "{}: {}", self.path, self.kind)
     }
 }
 
@@ -106,4 +107,14 @@ pub trait Fs {
 
     /// Whether `path` holds a file.
     fn exists(&self, path: &str) -> Result<bool, Error>;
+
+    /// The bytes of a file the *user* named, e.g. `--body /tmp/snippet.rs`.
+    ///
+    /// Contract: like `read`, but a path outside the crate is allowed. The store
+    /// addresses itself by crate-relative path and refuses to escape it; a source
+    /// the user typed is a different question, and the projection is still only
+    /// written inside the crate. `Ok(None)` is an absent file, as for `read`.
+    fn read_source(&self, path: &str) -> Result<Option<Vec<u8>>, Error> {
+        self.read(path)
+    }
 }

@@ -16,6 +16,7 @@ use crate::core::model::kind::Kind;
 use crate::core::plan::policy::Split;
 
 mod body;
+mod head;
 mod describe;
 
 pub use describe::describe;
@@ -35,14 +36,14 @@ pub fn add(env: &super::Env<'_>, add: Add, stdin: &str, split: Split) -> Result<
     }
 
     let module = match add.kind {
-        Kind::Module => body::normalize_module(&add.name),
+        Kind::Module => head::normalize_module(&add.name),
         _ => add
             .module
             .clone()
-            .map(|module| body::normalize_module(&module))
-            .unwrap_or_else(|| body::root_module(env)),
+            .map(|module| head::normalize_module(&module))
+            .unwrap_or_else(|| head::root_module(env)),
     };
-    let signature = body::signature(&add);
+    let signature = head::signature(&add)?;
     let (body, mode) = match add.kind {
         Kind::Module => (body::preamble(env, &add, stdin)?, crate::core::model::element::BodyMode::Split),
         _ => body::element_body(env, add.body.as_ref(), stdin, add.kind.needs_body(), split)?,
@@ -62,6 +63,14 @@ pub fn edit(env: &super::Env<'_>, edit: Edit, stdin: &str, split: Split) -> Resu
     if edit.doc.is_some() {
         return Err(error::unsupported("edit", "--doc"));
     }
+    if edit.mode.is_some() && edit.body.is_none() {
+        return Err(Error {
+            code: "usage.missing_argument",
+            exit: super::Exit::Usage,
+            message: "--body-mode needs --body".to_string(),
+        });
+    }
+    let split = edit.mode.unwrap_or(split);
     let id = parse_id(&edit.id)?;
     let parsed = match edit.body.as_ref() {
         Some(source) => Some(body::element_body(env, Some(source), stdin, true, split)?),
@@ -134,7 +143,7 @@ pub fn move_(mov: Mv) -> Result<Change, Error> {
         exit: super::Exit::Usage,
         message: "mv needs a module or --after".to_string(),
     })?;
-    let module = body::normalize_module(&module);
+    let module = head::normalize_module(&module);
     Ok(Change::MoveElement {
         id: parse_id(&mov.subject)?,
         module,

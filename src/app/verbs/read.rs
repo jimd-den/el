@@ -1,6 +1,7 @@
 // The read verbs: `run`, `log`, `version`. They share one property — they never
-// stage a transaction — but `run` still refuses to run a drifted tree, and `log`
-// still rolls back an interrupted one before reading the journal.
+// stage a transaction. `run` holds the writer lock (it executes the projection),
+// so it may roll back an interrupted one and refuses a drifted tree; `log` holds
+// neither and repairs nothing.
 
 use super::super::{error, load, projection, Env, Exit, Report};
 use crate::core::history::entry::Entry;
@@ -60,9 +61,6 @@ pub fn log(env: &Env<'_>, count: Option<usize>, attic: bool) -> Report {
     if let Err(error) = load::ensure_crate(env) {
         return Report::fail("log", error);
     }
-    if let Err(error) = super::super::transaction::recover(env) {
-        return Report::fail("log", error);
-    }
     let mut entries = match env.journal.entries() {
         Ok(entries) => entries,
         Err(error) => return Report::fail("log", error::store(error)),
@@ -108,9 +106,12 @@ pub(super) fn entry_payload(entry: &Entry) -> Json {
     ])
 }
 
+/// The package version this binary was built from. The milestone is deliberately
+/// absent: it lives in `README.md` and `docs/PLAN.md`, which is one place fewer
+/// than the number that shipped said `M6` while the crate shipped M8.
 pub fn version() -> Report {
     let mut report = Report::new("version");
-    let text = "el 0.1.0 (M6)".to_string();
+    let text = format!("el {}", env!("CARGO_PKG_VERSION"));
     report.lines.push(text.clone());
     report.payload = Some(Json::Str(text));
     report

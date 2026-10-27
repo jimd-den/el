@@ -64,3 +64,8 @@ fn ls_refuses_an_unknown_kind_and_lists_the_ones_that_exist() {
     assert!(refusal.message.contains("fn"), "{refusal}");
 }
 
+
+#[test]
+fn an_unknown_flag_is_a_usage_error() {
+    assert_eq!(refused("ls --bogus").code, "usage.unknown_flag");
+}

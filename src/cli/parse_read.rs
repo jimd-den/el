@@ -3,7 +3,7 @@
 // unknown token names the ones that exist.
 
 use super::args::{Args, Usage};
-use super::request::{Command, Ls, Show, Tree};
+use super::request::{Command, Find, Ls, Show, Tree};
 use crate::core::model::kind::Kind;
 
 pub(super) fn command(verb: &str, args: &Args) -> Result<Option<Command>, Usage> {
@@ -22,6 +22,9 @@ pub(super) fn command(verb: &str, args: &Args) -> Result<Option<Command>, Usage>
             source: args.has("--source"),
             history: args.has("--history"),
             terse: args.has("--terse"),
+        }),
+        "find" => Command::Find(Find {
+            query: args.required("find")?,
         }),
         _ => return Ok(None),
     };

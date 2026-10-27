@@ -52,7 +52,7 @@ implementation is demanded by a test written first.
 | M9 | Compiler gate | **UC-2**: told before commit that it would not compile | ✅ |
 | M10 | Semantic layer | **UC-9/UC-10**: RA rename, refs, quick fixes | ☐ stub |
 | M11 | Search and doc | **UC-5**: std lookup without leaving the terminal | ☐ stub |
-| M12 | Agent surface, dogfood, polish | **UC-6/UC-7**: batch, skill, self-compliance | ☐ stub |
+| M12 | Agent surface, dogfood, polish | **UC-6/UC-7**: batch, skill, self-compliance | ☐ stub (batch + find shipped as `el batch`/`el find`, ADR-0027; `apply` script form and skill still open) |
 
 A milestone is ✅ only when its acceptance test exists, was seen red, and now passes. A module
 that exists but decides nothing is ☐, whatever the commit message says.
@@ -597,6 +597,13 @@ policy.
 
 **RED first.** `tests/acceptance/apply_is_atomic.rs` (UC-6): a five-change batch where the
 fourth is invalid; assert none of the five landed, one journal entry (rejected), exit 2.
+
+Shipped ahead of the rest of M12 (ADR-0027): `el batch` (the batch parser, one
+transaction, all-or-nothing — JSON input rather than the `apply` script form,
+which remains unbuilt) and `el find` (name resolution without the whole-crate
+dump). The acceptance tests are `batch_adds_are_atomic.rs` and
+`find_resolves_names.rs`; the UC-6 shape is covered by the gate-rejection and
+plan-failure cases there.
 
 | Unit | Behaviour |
 |---|---|

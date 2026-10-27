@@ -111,9 +111,14 @@ anchor. `add` prints the new id on stdout (`FR-6`). `edit` prints the ids it cha
 the ids it removed **and every remaining reference** (`FR-9`); dangling references are an
 L0 violation unless `--cascade`, which removes them in the same transaction.
 
-`--rename` on a function, struct, enum, trait or const uses `rust-analyzer`'s
-`textDocument/rename` when available (`FR-51`); `--fast` uses the catalog's own reference
-rewriting. The output states which one ran.
+`--rename` rewrites the catalog's own references: whole identifiers only, in statement
+text and element heads, with strings, comments, char literals and lifetimes untouched. It is
+a token rewrite, not name resolution — when the renamed element is not a module, the
+qualifier in `greet::call()` and the member in `plan.apply()` are left alone; when it is a
+module, only qualifier sites are rewritten. A rename the rewrite could not complete is
+refused by the compiler gate, which is why an incomplete one is visible rather than silent.
+`rust-analyzer`-backed `textDocument/rename` (`FR-51`, `FR-52`) is scheduled for M10 as
+`ADR-0011` describes it and is **not built**: the binary has no LSP adapter.
 
 `apply` reads a batch script, one change per line, comments with `#`:
 
@@ -126,6 +131,16 @@ rm el-0011
 ```
 
 The whole script is one transaction: one journal entry, one gate, all-or-nothing (`FR-10`).
+`apply` is specified but unbuilt; `batch` below is the built half of the same intent.
+
+`batch` is `apply`'s JSON sibling, built: it reads a JSON array from stdin, one
+object per `add` (`kind`, `name`, `in`, `vis`, `sig`, `body`; a module item's
+`body` becomes its preamble), and commits all items under one sequence —
+or nothing. A plan failure names its change (`change {i} ({kind} {name} in
+{module})`); a gate rejection restores the tree and journals one
+`rejected:<n>` attempt. Statements are refused (`usage.unsupported`):
+they need ids that do not exist until planning. `--dry-run` previews the
+whole batch; `--fast` and `--strict` pass through as for `add`.
 
 ### 4.3 Inspect
 
@@ -133,6 +148,7 @@ The whole script is one transaction: one journal entry, one gate, all-or-nothing
 el ls [--module <m>] [--kind <k>] [--opaque] [--json]
 el tree [--statements] [--json]
 el show <id> [--statements] [--source] [--history] [--terse] [--json]
+el find <query> [--json]
 el explain <id> [--json]
 el refs <id> [--json]
 el catalog [--json]
@@ -143,9 +159,13 @@ el catalog [--json]
 | `ls` | What elements exist, with id, kind, alias, module, line count, body mode |
 | `tree` | The three-level outline: crate → modules → items → statements |
 | `show` | Everything about one element: id, alias, visibility, signature, doc, body mode, statement ids, owning sequence. A statement id shows its owner, parent, index and text instead. `--terse` collapses the header to one line (`<id> <kind> <alias> <module> <signature>`, or `<id> stmt owner <owner> parent <parent> <text>` for a statement) and lists statement bodies under it; `--source` / `--history` sections and the JSON payload are unchanged. |
+| `find` | The ids for a name, without the whole-crate dump: a query matches a named element when it equals its bare name, its alias, or its `module::name` path. Outline lines only (`<id> <alias>`), no bodies. No match is `notfound.element`, exit 6. |
 | `explain` | Why it exists: module preamble, doc text, RA hover when available (`FR-55`), callers, tests that name it, last 5 history entries |
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |
+
+`explain`, `refs` and `catalog` are specified but unbuilt: the CLI has no such verbs yet.
+`find` covers the "which ids answer to this name" question until `refs` lands.
 
 ### 4.4 Verify
 
@@ -190,7 +210,8 @@ el doc <path> [--offline] [--raw] [--json]
 
 Fetches via `$EL_FETCH` (default `curl -fsSL`), caches by URL digest for 7 days under
 `~/.cache/el/` (`FR-40`, `FR-41`). `--offline` never spawns the fetcher and exits 4 on a
-miss with the exact command that would warm the cache.
+miss with the exact command that would warm the cache. `search` and `doc` are specified but
+unbuilt: the CLI has no such verbs yet.
 
 ### 4.7 Self
 
@@ -200,16 +221,23 @@ el skill
 el version
 ```
 
-`doctor` reports: crate root, `.el` health, head seq, store size, orphaned objects, lock
-state, interrupted transaction, drift, and the status of each external tool
-(`cargo`, `rust-analyzer`, `curl`) with path and version (`FR-49`).
+`doctor` reports: crate root, store version, head seq, journal and attic size, whether a
+transaction was interrupted, drift between the catalog and the projection (read-only — it
+never re-renders), and how many blobs the store holds. It does not report lock state,
+because it holds the lock while it runs, and it does not yet report external tool paths and
+versions (`FR-49`, M10). Orphaned-object reporting is specified and unbuilt.
 `--repair` rolls back an interrupted transaction. `--rebuild` regenerates the catalog from
 the journal and must reproduce it byte for byte (`FR-34`).
 `--adopt` records a drifted file as an opaque module (`FR-37`).
 
 `skill` prints a self-contained usage guide (≤ 150 lines) designed to be pasted into an
-agent's context (`FR-47`). It is generated from the same table as `--help`, so it cannot
-drift from the code.
+agent's context (`FR-47`), and `--help` prints the same table. Both are specified but
+unbuilt: every page of this document is currently the only command reference, and an
+unknown verb names the verbs that exist rather than pointing at a command that does not.
+
+`version` prints `el <package version>` from `Cargo.toml`. The milestone is not in the
+binary: it lives in `README.md` and `docs/PLAN.md`, and a number kept in two places is a
+number that disagrees.
 
 ---
 
@@ -225,7 +253,7 @@ Success:
   "seq": 42,
   "changed": [{"op": "add", "id": "el-0007", "alias": "core::plan::apply"}],
   "gate": {"tier": "check", "new": 0, "fixed": 1, "existing": 5, "verdict": "ok", "ms": 812},
-  "notes": ["rust-analyzer 2026-10-13 used for rename"]
+  "notes": ["el: rewrote 1 file"]
 }
 ```
 
@@ -251,9 +279,11 @@ Failure:
 
 Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `seq`, `changed[].op`,
 `changed[].id`, `gate.*`, `diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
+A diagnostic the compiler gives no code for — a parse error — reports `uncoded`, never an
+empty string, because `code` is part of the diagnostic's identity.
 
 Error codes are namespaced and stable:
-`usage.unknown_flag`, `usage.unsupported`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
+`usage.unknown_flag`, `usage.unsupported`, `usage.bad_batch`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
 `model.cross_body_move`, `gate.rejected`, `env.missing_tool`, `env.tool_failed`, `env.timeout`,
 `env.bad_policy`, `env.drift`, `env.offline_miss`,
 `conflict.locked`, `notfound.element`, `ra.timeout`, `internal.panic`.
@@ -272,12 +302,14 @@ tree  data = {crate, modules: [{path, module, module_id|null, items: [
 show  data = {id, kind, alias|null, module, visibility, signature, doc|null,
               mode, sequence|null, statements: [id],
               statement_tree?, source?, history?}
+find  data = [{id, kind, alias|null, module}]
 ```
 
 `statement_tree` is `[{id, text, children: [...]}]` and appears only with
 `--statements`. `source` appears only with `--source`; `history` only with
 `--history`. `ls` orders by module path, then id; `tree` walks the renderer's
-module tree; both are the order the files are written in.
+module tree; both are the order the files are written in. `find` orders by
+module path, then id, like `ls`.
 
 ---
 

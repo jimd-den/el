@@ -84,7 +84,49 @@ fn health(env: &Env<'_>) -> Report {
         Ok(entries) => report.lines.push(format!("attic       {} entries", entries.len())),
         Err(error) => report.lines.push(format!("attic       error: {error}")),
     }
+    report.lines.push(format!("inflight    {}", inflight(env)));
+    report.lines.push(format!("drift       {}", drift(env)));
+    report.lines.push(format!("objects     {}", objects(env)));
     report
+}
+
+/// Whether a transaction was interrupted. The marker's own words are a pid, a
+/// digest and a timestamp, which is why the line names the command that clears it.
+fn inflight(env: &Env<'_>) -> String {
+    match env.journal.inflight() {
+        Ok(None) => "none".to_string(),
+        Ok(Some(marker)) => {
+            let seq = marker.split_whitespace().next().unwrap_or("?");
+            format!("seq {seq} pending; `el doctor --repair` rolls it back")
+        }
+        Err(error) => format!("error: {error}"),
+    }
+}
+
+/// Read-only drift: unlike `projection::check_drift`, this never re-renders a
+/// whitespace difference, because `doctor` without `--repair` must not write.
+fn drift(env: &Env<'_>) -> String {
+    let catalog = match load::catalog(env) {
+        Ok(catalog) => catalog,
+        Err(error) => return format!("unknown ({})", error.message),
+    };
+    let projection = crate::core::render::render(&catalog, &env.crate_name);
+    for file in &projection.files {
+        match env.fs.read(&file.path) {
+            Ok(Some(bytes)) if bytes == file.text.as_bytes() => continue,
+            Ok(Some(_)) => return format!("{} differs from the catalog", file.path),
+            Ok(None) => return format!("{} is missing", file.path),
+            Err(error) => return format!("{} could not be read ({error})", file.path),
+        }
+    }
+    "none".to_string()
+}
+
+fn objects(env: &Env<'_>) -> String {
+    match env.fs.list(".el/objects") {
+        Ok(files) => format!("{} blobs", files.len()),
+        Err(error) => format!("error: {error}"),
+    }
 }
 
 fn missing(message: &str) -> error::Error {

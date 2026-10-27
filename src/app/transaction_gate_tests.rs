@@ -108,7 +108,7 @@ fn a_missing_baseline_is_computed_from_the_old_tree() {
 }
 
 #[test]
-fn a_dry_run_with_new_diagnostics_records_preview() {
+fn a_dry_run_with_new_errors_exits_with_the_verdict_it_previews() {
     let memory = Memory::new();
     let store = Store::new(&memory);
     seed(&memory, &store, &catalog());
@@ -130,7 +130,9 @@ fn a_dry_run_with_new_diagnostics_records_preview() {
 
     let report = run(&memory, &store, &Fixed(1), &tools, mutation);
 
-    assert!(report.error.is_none(), "{:?}", report.error);
+    let error = report.error.as_ref().expect("a refused preview says so");
+    assert_eq!(error.code, "gate.would_reject");
+    assert_eq!(report.exit(), Exit::Gate);
     let gate = report.gate.expect("gate");
     assert_eq!(gate.verdict, "preview");
     assert_eq!(gate.new, 1);

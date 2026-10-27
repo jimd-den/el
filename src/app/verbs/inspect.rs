@@ -1,19 +1,21 @@
-// The loading half of the read verbs: recover an interrupted transaction, load
-// the catalog, and hand the pure `inspect` functions a projection. They never
-// stage a transaction and never write.
+// The loading half of the read verbs: load the catalog and hand the pure
+// `inspect` functions a projection. They never stage a transaction, never write,
+// and never repair — recovery needs the writer lock, and a read holding it would
+// refuse to run during the transaction it is reading about. `doctor --repair` and
+// the next mutating command own that; see ADR-0020.
 //
 // They follow `log`, not `run`, on drift: these verbs answer from the catalog, so
 // a hand edit on disk does not change the answer. `show --source` renders the
 // committed model, not the drifted file; that is the read-only contract ADR-0020
 // records.
 
-use super::super::{change, error, inspect, load, transaction, Env, Exit, Report};
+use super::super::{change, error, inspect, load, Env, Exit, Report};
 use crate::core::model::catalog::Catalog;
 use crate::core::model::kind::Kind;
 use crate::core::render::{render, Projection};
 
 pub fn ls(env: &Env<'_>, module: Option<&str>, kind: Option<Kind>, opaque: bool) -> Report {
-    let (catalog, projection, notes) = match prepare(env) {
+    let (catalog, projection) = match prepare(env) {
         Ok(loaded) => loaded,
         Err(error) => return Report::fail("ls", error),
     };
@@ -26,15 +28,34 @@ pub fn ls(env: &Env<'_>, module: Option<&str>, kind: Option<Kind>, opaque: bool)
             opaque,
         },
     );
-    report("ls", view, notes)
+    report("ls", view)
 }
 
 pub fn tree(env: &Env<'_>, statements: bool) -> Report {
-    let (catalog, _, notes) = match prepare(env) {
+    let (catalog, _) = match prepare(env) {
         Ok(loaded) => loaded,
         Err(error) => return Report::fail("tree", error),
     };
-    report("tree", inspect::tree(&catalog, &env.crate_name, statements), notes)
+    report("tree", inspect::tree(&catalog, &env.crate_name, statements))
+}
+
+pub fn find(env: &Env<'_>, query: &str) -> Report {
+    let (catalog, _) = match prepare(env) {
+        Ok(loaded) => loaded,
+        Err(error) => return Report::fail("find", error),
+    };
+    let view = inspect::find(&catalog, query);
+    if view.lines.is_empty() {
+        return Report::fail(
+            "find",
+            error::Error {
+                code: "notfound.element",
+                exit: Exit::NotFound,
+                message: format!("{query} does not match any element"),
+            },
+        );
+    }
+    report("find", view)
 }
 
 pub fn show(
@@ -49,7 +70,7 @@ pub fn show(
         Ok(id) => id,
         Err(error) => return Report::fail("show", error),
     };
-    let (catalog, projection, notes) = match prepare(env) {
+    let (catalog, projection) = match prepare(env) {
         Ok(loaded) => loaded,
         Err(error) => return Report::fail("show", error),
     };
@@ -70,23 +91,21 @@ pub fn show(
             None => return Report::fail("show", missing(id)),
         },
     };
-    report("show", view, notes)
+    report("show", view)
 }
 
-fn report(cmd: &'static str, view: inspect::View, notes: Vec<String>) -> Report {
+fn report(cmd: &'static str, view: inspect::View) -> Report {
     let mut report = Report::new(cmd);
     report.lines = view.lines;
     report.payload = Some(view.payload);
-    report.notes = notes;
     report
 }
 
-fn prepare(env: &Env<'_>) -> Result<(Catalog, Projection, Vec<String>), error::Error> {
+fn prepare(env: &Env<'_>) -> Result<(Catalog, Projection), error::Error> {
     load::ensure_crate(env)?;
-    let notes = transaction::recover(env)?;
     let catalog = load::catalog(env)?;
     let projection = render(&catalog, &env.crate_name);
-    Ok((catalog, projection, notes))
+    Ok((catalog, projection))
 }
 
 fn missing(id: crate::core::model::id::ElId) -> error::Error {

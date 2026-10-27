@@ -99,6 +99,10 @@ Line numbers are deliberately **not** in the fingerprint. This is the whole poin
 it. A line-based delta would report a phantom "new error" whenever a statement was inserted
 at the top of a body.
 
+E0601 is never attributed: it names a crate condition ("main function not
+found"), not an element, so it always falls back to (code, path,
+normalized_message) (ADR-0027).
+
 A diagnostic whose span maps to no element falls back to
 `(code, path, normalized_message)` and the output says `"exact": false`.
 The line is display, not identity: a structural edit above a crate-level

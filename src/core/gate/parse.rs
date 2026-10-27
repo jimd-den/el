@@ -32,11 +32,14 @@ pub fn parse_cargo_json(stdout: &str, attribute: &Attribute<'_>) -> Vec<Diagnost
         else {
             continue;
         };
+        // A parse error carries no code (`"code": null`). `uncoded` is a value
+        // rather than an empty string: `diagnostics[].code` is a published field,
+        // and two different uncoded errors must not share one spelling.
         let code = message
             .get("code")
             .and_then(|code| code.get("code"))
             .and_then(Json::as_str)
-            .unwrap_or("")
+            .unwrap_or("uncoded")
             .to_string();
         let raw = message
             .get("message")
@@ -46,7 +49,14 @@ pub fn parse_cargo_json(stdout: &str, attribute: &Attribute<'_>) -> Vec<Diagnost
             Some((path, line, col)) => (strip_dot_slash(path), line, col),
             None => (String::new(), 0, 0),
         };
-        let attributed = (!path.is_empty()).then(|| attribute(&path, line)).flatten();
+        // E0601 names a crate condition ("main function not found"), not an
+        // element: its span points at arbitrary file content, so attributing
+        // it makes its fingerprint flip whenever the span's owner changes
+        // (ADR-0027). It stays unattributed and falls back to (code, path,
+        // message), which is stable across adds until `fn main` lands.
+        let attributed = (code != "E0601" && !path.is_empty())
+            .then(|| attribute(&path, line))
+            .flatten();
         let (el, owner, exact) = match attributed {
             Some((el, owner)) => (Some(el), owner, true),
             None => (None, None, false),

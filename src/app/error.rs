@@ -46,6 +46,17 @@ pub fn unsupported(command: &'static str, what: &str) -> Error {
     }
 }
 
+/// A head the tool cannot invent: `const NAME` without a type is not a
+/// declaration. Refused before staging, so the user sees a usage error instead of
+/// a compiler error reported against a tree that was restored anyway.
+pub fn needs_sig(kind: crate::core::model::kind::Kind) -> Error {
+    Error {
+        code: "usage.missing_argument",
+        exit: Exit::Usage,
+        message: format!("add {} needs --sig (its type is not inferable)", kind.as_str()),
+    }
+}
+
 pub fn bad_body(error: crate::core::text::grammar::Error) -> Error {
     Error {
         code: "model.unbalanced",
