@@ -83,3 +83,34 @@ fn an_opaque_module_renders_its_file_byte_for_byte() {
         "fn main() {\n    println!(\"hi\");\n}\n"
     );
 }
+
+#[test]
+fn a_test_renders_with_its_attribute_line() {
+    use crate::core::model::element::NewElement;
+    use crate::core::model::kind::Kind;
+
+    let mut catalog = crate::core::model::catalog::Catalog::new();
+    catalog
+        .add_element(&NewElement {
+            kind: Kind::Module,
+            module: "src/util.rs",
+            signature: "mod util",
+            visibility: Visibility::Private,
+        })
+        .expect("module");
+    let test = catalog.add_element(&NewElement {
+        kind: Kind::Test,
+        module: "src/util.rs",
+        signature: "fn checks_answer()",
+        visibility: Visibility::Private,
+    });
+    assert!(test.is_ok(), "a test element must be creatable");
+    let test = test.expect("test");
+    catalog.add_stmt(test, "assert_eq!(answer(), 42);").expect("body");
+
+    let projection = crate::core::render::render(&catalog, "demo");
+    let text = &projection.file("src/util.rs").expect("file").text;
+
+    assert!(text.contains("#[test]\nfn checks_answer() {"), "rendered:\n{text}");
+    assert!(text.contains("assert_eq!(answer(), 42);"), "rendered:\n{text}");
+}

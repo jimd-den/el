@@ -43,3 +43,5 @@ mod check_reports_without_a_catalog;
 mod init_adopts_without_touching_bytes;
 mod new_edition_is_honest;
 mod show_by_name_names_find;
+mod test_loop_is_red_then_green;
+mod test_without_a_body_is_red_by_default;

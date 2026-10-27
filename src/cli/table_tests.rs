@@ -87,3 +87,17 @@ fn the_page_is_not_empty_and_has_no_duplicate_verbs() {
         );
     }
 }
+
+#[test]
+fn the_kinds_line_lists_exactly_the_real_kinds() {
+    use crate::core::model::kind::Kind;
+
+    let page = guide();
+    let lines: Vec<&str> = page.lines().collect();
+    let kinds_at = lines.iter().position(|line| *line == "kinds").expect("kinds section");
+    let mut listed: Vec<&str> = lines[kinds_at + 1].split_whitespace().collect();
+    listed.sort_unstable();
+    let mut real: Vec<&str> = Kind::all().iter().map(|kind| kind.as_str()).collect();
+    real.sort_unstable();
+    assert_eq!(listed, real, "kinds line promises a kind the parser refuses, or omits one");
+}

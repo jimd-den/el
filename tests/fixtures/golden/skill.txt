@@ -34,7 +34,11 @@ meta
   help     help [<verb>] | --help                     this page
 
 kinds
-  mod fn struct enum trait impl const static type use test stmt
+  mod fn struct enum trait impl const static type test stmt
+
+test loop
+  add test <name> --in <module> --sig 'fn <name>()' --body -   a #[test] fn
+  cargo test fails before the implementation, passes after. el check does not run tests.
 
 universal flags
   --json         one JSON object on stdout
@@ -87,4 +91,4 @@ json
   keys: el cmd ok error{code,exit,message,hint} seq changed[] gate{} data?
   gate diagnostics carry first_actionable: exactly one is true.
 
-not built: refs catalog test build fix search doc
+not built: refs catalog build fix search doc
