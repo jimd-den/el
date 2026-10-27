@@ -35,3 +35,4 @@ mod batch_adds_are_atomic;
 mod body_mode_is_honoured;
 mod default_signature_builds;
 mod skill_is_the_whole_surface;
+mod a_refusal_names_a_next_command;

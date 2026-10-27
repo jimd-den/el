@@ -37,6 +37,7 @@ pub fn render(report: &Report) -> String {
                 ("code".to_string(), text(error.code)),
                 ("exit".to_string(), count(error.exit.code() as usize)),
                 ("message".to_string(), text(&error.message)),
+                ("hint".to_string(), text(error.hint())),
             ]),
         ),
         None => {

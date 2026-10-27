@@ -264,7 +264,7 @@ Failure:
   "el": "1",
   "cmd": "add",
   "ok": false,
-  "error": {"code": "gate.rejected", "exit": 3, "message": "1 new error"},
+  "error": {"code": "gate.rejected", "exit": 3, "message": "1 new error", "hint": "el diff"},
   "gate": {
     "tier": "check", "new": 1, "fixed": 0, "existing": 4, "verdict": "rejected",
     "diagnostics": [{
@@ -277,16 +277,26 @@ Failure:
 }
 ```
 
-Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `seq`, `changed[].op`,
-`changed[].id`, `gate.*`, `diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
+Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `error.hint`, `seq`,
+`changed[].op`, `changed[].id`, `gate.*`,
+`diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
 A diagnostic the compiler gives no code for — a parse error — reports `uncoded`, never an
 empty string, because `code` is part of the diagnostic's identity.
 
 Error codes are namespaced and stable:
-`usage.unknown_flag`, `usage.unsupported`, `usage.bad_batch`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
-`model.cross_body_move`, `gate.rejected`, `env.missing_tool`, `env.tool_failed`, `env.timeout`,
-`env.bad_policy`, `env.drift`, `env.offline_miss`,
-`conflict.locked`, `notfound.element`, `ra.timeout`, `internal.panic`.
+`usage.unknown_verb`, `usage.unknown_flag`, `usage.unknown_kind`, `usage.missing_verb`,
+`usage.missing_argument`, `usage.missing_value`, `usage.repeated_flag`, `usage.bad_value`,
+`usage.unexpected_argument`, `usage.unsupported`, `usage.no_change`, `usage.bad_batch`,
+`usage.exists`, `model.duplicate_alias`, `model.unknown_ref`, `model.cross_body_move`,
+`model.unbalanced`, `model.bad_ident`, `model.ceiling`, `model.fn_budget`, `model.preamble`,
+`model.forbidden`, `model.dep_denied`, `model.dangling_ref`, `model.bad_stmt`, `gate.rejected`,
+`gate.would_reject`, `env.not_a_crate`, `env.drift`, `env.bad_policy`, `env.io`, `env.corrupt`,
+`env.missing_tool`, `env.tool_failed`, `env.timeout`, `env.run_failed`, `env.offline_miss`,
+`conflict.locked`, `notfound.element`, `notfound.sequence`, `ra.timeout`, `internal.panic`.
+
+Every refusal names a next command. Human output prints it on a `next: el …` line; the
+envelope carries it as `error.hint`. The hint is checked by a test that parses it with the
+same parser the user's next command will use, so a hint cannot name a command `el` refuses.
 
 ---
 

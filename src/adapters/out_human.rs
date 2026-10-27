@@ -23,6 +23,7 @@ pub fn stdout(report: &Report) -> String {
         // The id-carrying lines still print on failure: a refusal that changed
         // nothing is not a refusal that did nothing (`el rm` names the ids it kept).
         out.push_str(&format!("el: {}\n", error.message));
+        out.push_str(&format!("next: {}\n", error.hint()));
     }
     out
 }

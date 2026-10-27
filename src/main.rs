@@ -19,6 +19,7 @@ fn main() {
         Ok(parsed) => parsed,
         Err(usage) => {
             eprintln!("{usage}");
+            eprintln!("next: {}", el::app::report::hint_for(usage.code));
             std::process::exit(1);
         }
     };
