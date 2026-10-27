@@ -88,6 +88,9 @@ pub struct Edit {
     pub body: Option<Source>,
     pub doc: Option<Source>,
     pub visibility: Option<Visibility>,
+    /// `--body-mode split|opaque`: how the new body is stored. `None` means the
+    /// project policy decides. Parsed here, honoured in `change::edit`.
+    pub mode: Option<crate::core::plan::policy::Split>,
 }
 
 /// `el mv <subject> <module>`, or `el mv <stmt> --after <stmt>`.

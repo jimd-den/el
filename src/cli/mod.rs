@@ -14,6 +14,7 @@
 pub mod args;
 pub mod parse;
 mod parse_history;
+mod parse_mutate;
 mod parse_read;
 pub mod request;
 

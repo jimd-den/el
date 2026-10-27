@@ -25,4 +25,5 @@ mod gate_reports_only_new_errors;
 mod find_resolves_names;
 mod e0601_stays_preexisting;
 mod batch_adds_are_atomic;
+mod body_mode_is_honoured;
 mod default_signature_builds;

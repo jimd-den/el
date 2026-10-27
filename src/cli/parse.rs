@@ -7,9 +7,7 @@
 // other is a help text that lies, which is why both read `VALUE_FLAGS` here.
 
 use super::args::{Args, Usage};
-use super::request::{Add, Command, Edit, Globals, Mv, Parsed, Source};
-use crate::core::model::element::Visibility;
-use crate::core::model::kind::Kind;
+use super::request::{Command, Globals, Mv, Parsed};
 
 /// Parse a whole command line.
 pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
@@ -25,9 +23,9 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
         "init" => Command::Init {
             force: args.has("--force"),
         },
-        "add" => Command::Add(add(&args)?),
+        "add" => Command::Add(super::parse_mutate::add(&args)?),
         "batch" => Command::Batch,
-        "edit" => Command::Edit(edit(&args)?),
+        "edit" => Command::Edit(super::parse_mutate::edit(&args)?),
         "rm" => Command::Rm {
             ids: args.words[1..].to_vec(),
             cascade: args.has("--cascade"),
@@ -76,77 +74,6 @@ fn globals(args: &Args) -> Result<Globals, Usage> {
         no_color: args.has("--no-color"),
         root: args.value("--root")?,
     })
-}
-
-fn add(args: &Args) -> Result<Add, Usage> {
-    let kind = args
-        .words
-        .get(1)
-        .and_then(|word| Kind::parse(word))
-        .ok_or_else(|| {
-            Usage::new(
-                "usage.unknown_kind",
-                format!(
-                    "add needs a kind, one of: {}",
-                    Kind::all().iter().map(|k| k.as_str()).collect::<Vec<_>>().join(" ")
-                ),
-            )
-        })?;
-    let name = args
-        .words
-        .get(2)
-        .cloned()
-        .ok_or_else(|| Usage::new("usage.missing_argument", format!("add {kind} needs a name")))?;
-
-    Ok(Add {
-        kind,
-        name,
-        module: args.value("--in")?,
-        visibility: visibility(args.value("--vis")?)?,
-        signature: args.value("--sig")?,
-        body: source(args.value("--body")?),
-        doc: source(args.value("--doc")?),
-        preamble: source(args.value("--preamble")?),
-        after: args.value("--after")?,
-        before: args.value("--before")?,
-        at: at(args.value("--at")?)?,
-    })
-}
-
-fn edit(args: &Args) -> Result<Edit, Usage> {
-    Ok(Edit {
-        id: args.required("edit")?,
-        rename: args.value("--rename")?,
-        signature: args.value("--sig")?,
-        body: source(args.value("--body")?),
-        doc: source(args.value("--doc")?),
-        visibility: visibility(args.value("--vis")?)?,
-    })
-}
-
-fn visibility(value: Option<String>) -> Result<Option<Visibility>, Usage> {
-    match value {
-        None => Ok(None),
-        Some(token) => Visibility::parse(&token).map(Some).ok_or_else(|| {
-            Usage::new(
-                "usage.bad_visibility",
-                format!("--vis takes pub, crate or priv, not {token:?}"),
-            )
-        }),
-    }
-}
-
-fn source(value: Option<String>) -> Option<Source> {
-    value.map(|text| Source::parse(&text))
-}
-
-fn at(value: Option<String>) -> Result<Option<usize>, Usage> {
-    match value {
-        None => Ok(None),
-        Some(text) => text.parse().map(Some).map_err(|_| {
-            Usage::new("usage.bad_value", format!("--at takes a number, not {text:?}"))
-        }),
-    }
 }
 
 fn count(value: Option<&str>) -> Result<Option<usize>, Usage> {

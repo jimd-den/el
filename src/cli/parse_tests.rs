@@ -5,6 +5,9 @@
 // by a helper so a test never has to write `Vec<String>` by hand.
 
 use super::*;
+use crate::core::model::element::Visibility;
+use crate::core::model::kind::Kind;
+use crate::cli::request::Source;
 
 fn parsed(line: &str) -> Parsed {
     let argv: Vec<String> = line.split_whitespace().map(str::to_string).collect();
@@ -109,16 +112,6 @@ fn mv_reads_the_subject_then_the_module() {
 
     assert_eq!(move_.subject, "el-0004");
     assert_eq!(move_.module.as_deref(), Some("src/core/gate.rs"));
-}
-
-#[test]
-fn edit_reads_a_rename_as_one_value() {
-    let Command::Edit(edit) = parsed("edit el-0007 --rename apply_change").command else {
-        panic!("not an edit");
-    };
-
-    assert_eq!(edit.id, "el-0007");
-    assert_eq!(edit.rename.as_deref(), Some("apply_change"));
 }
 
 #[test]

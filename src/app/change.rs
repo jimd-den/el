@@ -63,6 +63,14 @@ pub fn edit(env: &super::Env<'_>, edit: Edit, stdin: &str, split: Split) -> Resu
     if edit.doc.is_some() {
         return Err(error::unsupported("edit", "--doc"));
     }
+    if edit.mode.is_some() && edit.body.is_none() {
+        return Err(Error {
+            code: "usage.missing_argument",
+            exit: super::Exit::Usage,
+            message: "--body-mode needs --body".to_string(),
+        });
+    }
+    let split = edit.mode.unwrap_or(split);
     let id = parse_id(&edit.id)?;
     let parsed = match edit.body.as_ref() {
         Some(source) => Some(body::element_body(env, Some(source), stdin, true, split)?),
