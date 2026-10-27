@@ -2,6 +2,7 @@ mod add_statement_by_anchor;
 mod author_builds_program_from_nothing;
 mod program;
 mod read_verbs_filter_and_refuse;
+mod reads_leave_an_interrupted_transaction_alone;
 mod read_verbs_navigate_without_source;
 mod corrupt_object_is_detected;
 mod diff_shows_element_changes;

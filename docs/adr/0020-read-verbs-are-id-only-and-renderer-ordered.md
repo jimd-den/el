@@ -9,11 +9,15 @@ a read verb refuses a drifted tree, whether `show` accepts an alias, and what th
 
 Decision:
 
-1. **Read verbs answer from the catalog, not the disk.** They recover an
-   interrupted transaction like `log`, but do not refuse a drifted tree. `run`
-   refuses drift because it is about to execute the files; `show --source` shows
-   the committed projection, which is the model the journal owns. A read verb that
-   silently read the hand-edited file would answer a question nobody asked.
+1. **Read verbs answer from the catalog, not the disk.** They neither refuse a
+   drifted tree nor repair an interrupted transaction: recovery needs the writer
+   lock, and a read that took it would refuse to run during the very transaction it
+   is reading about — or, worse, restore head's tree over a live writer's
+   half-written projection. `run` holds the lock because it executes the files, so
+   it may recover and refuses drift; `doctor --repair` recovers on request. `show
+   --source` shows the committed projection, which is the model the journal owns.
+   A read verb that silently read the hand-edited file would answer a question
+   nobody asked.
 2. **`show` is id-only.** It accepts `el-NNNN`, the form `edit` accepts. An alias
    such as `greet::fn/greet` is refused with `notfound.element` and exit 6; an id
    that is well formed but absent gets the same code. No alias lookup, no guessing.

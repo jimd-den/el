@@ -1,6 +1,7 @@
 // The read verbs: `run`, `log`, `version`. They share one property — they never
-// stage a transaction — but `run` still refuses to run a drifted tree, and `log`
-// still rolls back an interrupted one before reading the journal.
+// stage a transaction. `run` holds the writer lock (it executes the projection),
+// so it may roll back an interrupted one and refuses a drifted tree; `log` holds
+// neither and repairs nothing.
 
 use super::super::{error, load, projection, Env, Exit, Report};
 use crate::core::history::entry::Entry;
@@ -58,9 +59,6 @@ pub fn run(env: &Env<'_>, args: &[String]) -> Report {
 
 pub fn log(env: &Env<'_>, count: Option<usize>, attic: bool) -> Report {
     if let Err(error) = load::ensure_crate(env) {
-        return Report::fail("log", error);
-    }
-    if let Err(error) = super::super::transaction::recover(env) {
         return Report::fail("log", error);
     }
     let mut entries = match env.journal.entries() {

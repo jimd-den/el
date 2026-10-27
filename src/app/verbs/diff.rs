@@ -2,7 +2,7 @@
 // snapshot — the element/statement view that says which id changed. The id is the
 // point: a line range would move when a statement above it is inserted.
 
-use super::super::{error, load, transaction, Env, Report};
+use super::super::{error, load, Env, Report};
 use crate::core::history::entry::Entry;
 use crate::core::model::catalog::Catalog;
 use crate::core::text::diff::{self, Line};
@@ -13,9 +13,6 @@ use elements::{change_json, element_changes, element_lines, line_text};
 
 pub fn diff(env: &Env<'_>, a: Option<u64>, b: Option<u64>) -> Report {
     if let Err(error) = load::ensure_crate(env) {
-        return Report::fail("diff", error);
-    }
-    if let Err(error) = transaction::recover(env) {
         return Report::fail("diff", error);
     }
     let head = match env.journal.head().map_err(error::store) {
