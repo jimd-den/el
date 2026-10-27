@@ -130,8 +130,13 @@ edit el-0007 --rename apply_change
 rm el-0011
 ```
 
-The whole script is one transaction: one journal entry, one gate, all-or-nothing (`FR-10`).
-`apply` is specified but unbuilt; `batch` below is the built half of the same intent.
+The whole script is one transaction: one journal entry (op `apply`), one gate, all-or-nothing
+(`FR-10`). Every line goes through the same parser as argv, so a script and a command line
+cannot disagree about a flag. A line may carry `add`, `edit`, `mv` or `rm`; global flags belong
+to `apply` itself, `--body -` is refused (the script owns stdin), and an id must exist when the
+script starts — an element added on an earlier line has no id until planning, so edit it in a
+later `apply` rather than guessing. A plan refusal names the line: `apply line 3: change 2 …`.
+A gate rejection restores the tree and journals one `rejected:<n>` attempt, as `batch` does.
 
 `batch` is `apply`'s JSON sibling, built: it reads a JSON array from stdin, one
 object per `add` (`kind`, `name`, `in`, `vis`, `sig`, `body`; a module item's
@@ -288,6 +293,7 @@ Error codes are namespaced and stable:
 `usage.unknown_verb`, `usage.unknown_flag`, `usage.unknown_kind`, `usage.missing_verb`,
 `usage.missing_argument`, `usage.missing_value`, `usage.repeated_flag`, `usage.bad_value`,
 `usage.unexpected_argument`, `usage.unsupported`, `usage.no_change`, `usage.bad_batch`,
+`usage.bad_script`,
 `usage.exists`, `model.duplicate_alias`, `model.unknown_ref`, `model.cross_body_move`,
 `model.unbalanced`, `model.bad_ident`, `model.ceiling`, `model.fn_budget`, `model.preamble`,
 `model.forbidden`, `model.dep_denied`, `model.dangling_ref`, `model.bad_stmt`, `gate.rejected`,

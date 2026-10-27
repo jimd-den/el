@@ -30,10 +30,11 @@ pub enum Op {
     Import,
     Revert,
     Repair,
+    Apply,
 }
 
 impl Op {
-    pub const ALL: [Op; 11] = [
+    pub const ALL: [Op; 12] = [
         Op::Init,
         Op::Add,
         Op::Edit,
@@ -45,6 +46,7 @@ impl Op {
         Op::Import,
         Op::Revert,
         Op::Repair,
+        Op::Apply,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -60,6 +62,7 @@ impl Op {
             Op::Import => "import",
             Op::Revert => "revert",
             Op::Repair => "repair",
+            Op::Apply => "apply",
         }
     }
 

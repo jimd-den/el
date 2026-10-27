@@ -41,6 +41,7 @@ const VERB_LINES: &[(&str, &str, &str)] = &[
     ("init", "init [--force]", "adopt an existing crate (not built)"),
     ("add", "add <kind> <name> [--in] [--body] …", "add an element or statement"),
     ("batch", "batch", "JSON adds as one transaction"),
+    ("apply", "apply [<file>|-]", "many change kinds, one transaction"),
     ("edit", "edit <id> [--rename|--sig|--body|--vis]", "change one element"),
     ("rm", "rm <id>… [--cascade]", "remove elements"),
     ("mv", "mv <id> <module> | mv <stmt> --after <stmt>", "move or reorder"),

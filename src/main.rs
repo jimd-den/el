@@ -111,6 +111,7 @@ fn needs_lock(command: &Command) -> bool {
             | Command::Init { .. }
             | Command::Add(_)
             | Command::Batch
+            | Command::Apply { .. }
             | Command::Edit(_)
             | Command::Rm { .. }
             | Command::Mv(_)
@@ -130,6 +131,7 @@ fn uses_stdin(command: &Command) -> bool {
         Command::Add(add) => source(&add.body) || source(&add.preamble) || source(&add.doc),
         Command::Edit(edit) => source(&edit.body) || source(&edit.doc),
         Command::Batch => true,
+        Command::Apply { file } => file.as_deref().is_none_or(|path| path == "-"),
         _ => false,
     }
 }

@@ -63,6 +63,7 @@ pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: boo
             target: "-".to_string(),
             message: format!("created {}", env.crate_name),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: false,
             strict: globals.strict,
             // The scaffold is not a user change: it always runs at L0, and

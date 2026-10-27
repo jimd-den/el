@@ -14,7 +14,7 @@ use super::request::{Command, Globals, Mv, Parsed};
 /// the two drift apart.
 pub const VERBS: &[&str] = &[
     "new", "init", "add", "batch", "edit", "rm", "mv", "run", "log", "version", "ls", "tree",
-    "show", "find", "diff", "undo", "redo", "revert", "doctor", "skill", "help",
+    "show", "find", "diff", "undo", "redo", "revert", "doctor", "skill", "help", "apply",
 ];
 
 /// Parse a whole command line.
@@ -44,6 +44,9 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
         },
         "add" => Command::Add(super::parse_mutate::add(&args)?),
         "batch" => Command::Batch,
+        "apply" => Command::Apply {
+            file: args.words.get(1).cloned(),
+        },
         "skill" => Command::Skill,
         "edit" => Command::Edit(super::parse_mutate::edit(&args)?),
         "rm" => Command::Rm {
@@ -117,7 +120,7 @@ fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
         Command::Mv(_) => 3,
         Command::Add(_) => 3,
         Command::Batch => 1,
-        Command::Edit(_) | Command::Show(_) | Command::Find(_) => 2,
+        Command::Edit(_) | Command::Show(_) | Command::Find(_) | Command::Apply { .. } => 2,
         Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. }
         | Command::Skill => 1,
         Command::Help { .. } => usize::MAX,

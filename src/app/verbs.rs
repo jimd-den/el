@@ -10,6 +10,7 @@ use super::Env;
 use crate::cli::request::{Add, Edit, Globals, Mv};
 use crate::core::history::entry::Op;
 
+mod apply;
 mod batch;
 mod diff;
 mod doctor;
@@ -17,6 +18,7 @@ mod history;
 mod inspect;
 mod read;
 
+pub use apply::apply;
 pub use batch::batch;
 pub use diff::diff;
 pub use doctor::doctor;
@@ -50,6 +52,7 @@ pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
             target: format!("{} {}", add.kind, add.name),
             message: format!("add {} {}", add.kind, add.name),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
@@ -75,6 +78,7 @@ pub fn edit(env: &Env<'_>, globals: &Globals, edit: Edit, stdin: &str) -> Report
             target: edit.id.clone(),
             message: format!("edit {}", edit.id),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
@@ -96,6 +100,7 @@ pub fn remove(env: &Env<'_>, globals: &Globals, ids: &[String]) -> Report {
             target: ids.join(" "),
             message: format!("rm {}", ids.join(" ")),
             changes,
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
@@ -117,6 +122,7 @@ pub fn move_(env: &Env<'_>, globals: &Globals, mv: Mv) -> Report {
             target: mv.subject.clone(),
             message: format!("mv {} {}", mv.subject, mv.module.clone().unwrap_or_default()),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,

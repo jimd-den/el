@@ -39,6 +39,9 @@ pub struct Mutation {
     pub target: String,
     pub message: String,
     pub changes: Vec<crate::core::model::change::Change>,
+    /// One line number per change when the changes came from a script; empty for
+    /// a command line. Used only to name the line in a plan refusal.
+    pub origins: Vec<usize>,
     pub dry_run: bool,
     pub strict: bool,
     pub fast: bool,

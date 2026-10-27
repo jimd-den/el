@@ -92,6 +92,7 @@ pub const HINTS: &[(&str, &str)] = &[
     ("usage.unsupported", "el help"),
     ("usage.no_change", "el help"),
     ("usage.bad_batch", "el help"),
+    ("usage.bad_script", "el help"),
     ("usage.exists", "el init"),
     ("model.ceiling", "el ls"),
     ("model.duplicate_alias", "el ls"),

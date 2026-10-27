@@ -37,3 +37,4 @@ mod default_signature_builds;
 mod skill_is_the_whole_surface;
 mod a_refusal_names_a_next_command;
 mod one_diagnostic_is_first_actionable;
+mod apply_is_atomic;

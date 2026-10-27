@@ -111,6 +111,7 @@ pub fn batch(env: &Env<'_>, globals: &Globals, stdin: &str) -> Report {
             target: format!("batch {count}"),
             message: format!("batch {count} adds"),
             changes,
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
