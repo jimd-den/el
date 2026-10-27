@@ -1,0 +1,8 @@
+# The benchmark fixtures and the design documents are data: ten tiny crates,
+# prompts, shell checks and prose. Reviewing them line by line costs the
+# reviewer's file budget without finding code defects; the harness has its own
+# meta test and the documents are reviewed as documents.
+reviews:
+  path_filters:
+    - "!tests/bench/**"
+    - "!docs/**"

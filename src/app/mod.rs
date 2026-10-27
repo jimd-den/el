@@ -10,6 +10,7 @@
 // are adapters reading the same `Report`, which is what keeps `--json` from being a
 // second code path through every verb.
 
+pub mod adopt;
 pub mod change;
 pub mod create;
 pub mod error;
@@ -54,14 +55,11 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
     }
 
     match &parsed.command {
-        Command::New { path, lib, policy } => {
-            create::new(env, &parsed.globals, path, *lib, *policy)
+        Command::New { path, lib, policy, edition } => {
+            create::new(env, &parsed.globals, path, *lib, *policy, edition.as_deref())
         }
         Command::Version => verbs::version(),
-        Command::Init { .. } => Report::fail(
-            "init",
-            error::unsupported("init", "existing crate adoption (M12)"),
-        ),
+        Command::Init { force } => adopt::init(env, parsed.globals.dry_run, *force),
         Command::Add(add) => verbs::add(env, &parsed.globals, add.clone(), stdin),
         Command::Edit(edit) => verbs::edit(env, &parsed.globals, edit.clone(), stdin),
         Command::Rm { ids, cascade } => {
@@ -85,6 +83,11 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
             verbs::show(env, &show.id, show.statements, show.source, show.history, show.terse)
         }
         Command::Find(find) => verbs::find(env, &find.query),
+        Command::Explain { id } => verbs::explain(env, id),
         Command::Batch => verbs::batch(env, &parsed.globals, stdin),
+        Command::Check => verbs::check(env, &parsed.globals),
+        Command::Apply { file } => verbs::apply(env, &parsed.globals, file.as_deref(), stdin),
+        Command::Skill => verbs::guide("skill"),
+        Command::Help { .. } => verbs::guide("help"),
     }
 }

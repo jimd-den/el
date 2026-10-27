@@ -10,19 +10,31 @@ use super::Env;
 use crate::cli::request::{Add, Edit, Globals, Mv};
 use crate::core::history::entry::Op;
 
+mod apply;
 mod batch;
+mod check;
 mod diff;
 mod doctor;
 mod history;
 mod inspect;
 mod read;
 
+pub use apply::apply;
 pub use batch::batch;
+pub use check::check;
 pub use diff::diff;
 pub use doctor::doctor;
 pub use history::{redo, revert, undo};
-pub use inspect::{find, ls, show, tree};
+pub use inspect::{explain, find, ls, show, tree};
 pub use read::{log, run, version};
+
+/// The one page `el skill`, `el help` and `--help` print. It reads the CLI's own
+/// tables, so the page cannot list a verb the parser refuses.
+pub fn guide(cmd: &'static str) -> Report {
+    let mut report = Report::new(cmd);
+    report.lines = crate::cli::table::guide().lines().map(str::to_string).collect();
+    report
+}
 
 pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
     let split = match load::policy(env) {
@@ -42,6 +54,7 @@ pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
             target: format!("{} {}", add.kind, add.name),
             message: format!("add {} {}", add.kind, add.name),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
@@ -67,6 +80,7 @@ pub fn edit(env: &Env<'_>, globals: &Globals, edit: Edit, stdin: &str) -> Report
             target: edit.id.clone(),
             message: format!("edit {}", edit.id),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
@@ -88,6 +102,7 @@ pub fn remove(env: &Env<'_>, globals: &Globals, ids: &[String]) -> Report {
             target: ids.join(" "),
             message: format!("rm {}", ids.join(" ")),
             changes,
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
@@ -109,6 +124,7 @@ pub fn move_(env: &Env<'_>, globals: &Globals, mv: Mv) -> Report {
             target: mv.subject.clone(),
             message: format!("mv {} {}", mv.subject, mv.module.clone().unwrap_or_default()),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,

@@ -27,6 +27,20 @@ pub enum Error {
     UnknownId(ElId),
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::DuplicateAlias { existing, alias } => {
+                write!(f, "{alias} is already taken by {existing}")
+            }
+            Error::BadSignature { signature } => {
+                write!(f, "{signature:?} is not a declaration for its kind")
+            }
+            Error::UnknownId(id) => write!(f, "{id} does not exist"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Catalog {
     pub elements: Vec<Element>,

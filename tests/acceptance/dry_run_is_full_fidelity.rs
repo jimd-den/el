@@ -51,3 +51,22 @@ fn the_same_change_without_dry_run_is_also_rejected() {
 
     assert_eq!(real.status.code(), Some(3), "{}", String::from_utf8_lossy(&real.stderr));
 }
+
+#[test]
+fn a_strict_preview_with_only_a_warning_says_warning_not_zero_errors() {
+    let built = build("dry-run-warning");
+
+    let output = el_stdin(
+        &built.hello,
+        &[
+            "add", "fn", "warned", "--sig", "fn warned()", "--body", "-", "--dry-run",
+            "--strict",
+        ],
+        "let unused = 1;",
+    );
+
+    assert_eq!(output.status.code(), Some(3), "{}", String::from_utf8_lossy(&output.stderr));
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("new warning"), "{text}");
+    assert!(!text.contains("0 new error"), "{text}");
+}

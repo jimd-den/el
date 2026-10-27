@@ -15,6 +15,9 @@ use crate::core::history::entry::{Entry, Op};
 use crate::core::history::object;
 use std::time::Instant;
 
+pub(crate) use gate::{diagnostics, select};
+pub(crate) use outcome::{diagnostic_lines, gate_from_diagnostics};
+
 mod gate;
 mod outcome;
 mod prepare;
@@ -39,6 +42,9 @@ pub struct Mutation {
     pub target: String,
     pub message: String,
     pub changes: Vec<crate::core::model::change::Change>,
+    /// One line number per change when the changes came from a script; empty for
+    /// a command line. Used only to name the line in a plan refusal.
+    pub origins: Vec<usize>,
     pub dry_run: bool,
     pub strict: bool,
     pub fast: bool,
@@ -95,10 +101,16 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
         Err(error) => return outcome::abort(env, &prepared.old_tree, &entry, mutation.cmd, error),
     };
     let ms = started.elapsed().as_millis() as u64;
+    let touched: Vec<crate::core::model::id::ElId> = prepared
+        .changed
+        .iter()
+        .filter_map(|change| crate::core::model::id::ElId::parse(&change.id))
+        .collect();
     let judged = outcome::GateVerdict {
         tier: prepared.tier,
         delta: &evaluation.delta,
         catalog: &prepared.catalog,
+        touched: &touched,
     };
 
     if mutation.dry_run {
@@ -149,6 +161,7 @@ pub fn apply(env: &super::Env<'_>, mutation: Mutation) -> Report {
         notes.extend(outcome::diagnostic_lines(
             &prepared.catalog,
             &evaluation.delta.new,
+            &touched,
         ));
     }
 

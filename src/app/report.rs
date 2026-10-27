@@ -33,6 +33,9 @@ pub struct GateDiagnostic {
     pub message: String,
     /// False when the diagnostic fell back to file/line attribution.
     pub exact: bool,
+    /// Exactly one new diagnostic is marked on a rejection: the one attributed to
+    /// an element the change touched, or the first exact one when none was.
+    pub first_actionable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,6 +76,75 @@ pub struct Report {
     pub error: Option<Error>,
 }
 
+/// The next command a refusal names. One line per published code, so a failure
+/// that leaves the user with nowhere to go is a test failure rather than a habit.
+/// The fallback is the page that names every other command.
+pub const HINTS: &[(&str, &str)] = &[
+    ("usage.unknown_verb", "el help"),
+    ("usage.unknown_flag", "el help"),
+    ("usage.unknown_kind", "el help"),
+    ("usage.missing_verb", "el help"),
+    ("usage.missing_argument", "el help"),
+    ("usage.missing_value", "el help"),
+    ("usage.repeated_flag", "el help"),
+    ("usage.bad_value", "el help"),
+    ("usage.unexpected_argument", "el help"),
+    ("usage.unsupported", "el help"),
+    ("usage.no_change", "el help"),
+    ("usage.bad_batch", "el help"),
+    ("usage.bad_script", "el help"),
+    ("usage.exists", "el ls"),
+    ("model.ceiling", "el ls"),
+    ("model.duplicate_alias", "el ls"),
+    ("model.dangling_ref", "el rm"),
+    ("model.cross_body_move", "el tree"),
+    ("model.unbalanced", "el help"),
+    ("model.unknown_ref", "el ls"),
+    ("model.bad_ident", "el help"),
+    ("model.fn_budget", "el tree"),
+    ("model.preamble", "el tree"),
+    ("model.forbidden", "el help"),
+    ("model.dep_denied", "el help"),
+    ("model.bad_stmt", "el tree"),
+    ("model.opaque", "el tree"),
+    ("notfound.element", "el ls"),
+    ("notfound.sequence", "el log"),
+    ("gate.rejected", "el diff"),
+    ("gate.would_reject", "el diff"),
+    ("gate.failed", "el check --json"),
+    ("env.not_a_crate", "el new hello"),
+    ("env.not_a_project", "el new hello"),
+    ("env.drift", "el undo"),
+    ("env.bad_policy", "el doctor"),
+    ("env.io", "el doctor"),
+    ("env.corrupt", "el doctor"),
+    ("env.missing_tool", "el help"),
+    ("env.tool_failed", "el doctor"),
+    ("env.timeout", "el doctor"),
+    ("env.run_failed", "el log"),
+    ("env.offline_miss", "el help"),
+    ("conflict.locked", "el doctor"),
+    ("ra.timeout", "el help"),
+    ("internal.panic", "el doctor"),
+];
+
+/// The hint for a code. An unpublished code still gets a valid page rather than
+/// an empty line; the tests above make the table the thing that grows.
+pub fn hint_for(code: &str) -> &'static str {
+    HINTS
+        .iter()
+        .find(|(known, _)| *known == code)
+        .map(|(_, hint)| *hint)
+        .unwrap_or("el help")
+}
+
+impl Error {
+    /// The next command this refusal names.
+    pub fn hint(&self) -> &'static str {
+        hint_for(self.code)
+    }
+}
+
 impl Report {
     /// A report for a command that has not yet had a chance to fail.
     pub fn new(cmd: &'static str) -> Self {
@@ -110,3 +182,7 @@ impl Report {
         self
     }
 }
+
+#[cfg(test)]
+#[path = "report_tests.rs"]
+mod report_tests;

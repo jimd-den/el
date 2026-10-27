@@ -1,0 +1,10 @@
+01-add-answer	Add a public function answer that returns 42
+02-add-module	Add a module with a function that shouts
+03-rename	Rename unused to spare
+04-remove	Remove unused
+05-add-statement	Add a statement to a function body
+06-second-print	Print the value twice
+07-move	Move unused into its own module
+08-add-const	Add a constant with a type
+09-fix-broken	Fix the compiler error el reports
+10-apply	Compose five changes in one transaction

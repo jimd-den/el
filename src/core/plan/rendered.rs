@@ -15,6 +15,7 @@
 // which is why it belongs here and not with the catalog rules.
 
 use crate::core::model::catalog::Catalog;
+use crate::core::model::element::BodyMode;
 use crate::core::model::id::ElId;
 use crate::core::model::kind::Kind;
 use crate::core::plan::policy::Policy;
@@ -90,7 +91,7 @@ fn fn_budgets(
     out: &mut Vec<Violation>,
 ) {
     for element in &catalog.elements {
-        if !element.kind.takes_block() {
+        if !element.kind.takes_block() || element.mode == BodyMode::Opaque {
             continue;
         }
         let Some(span) = projection

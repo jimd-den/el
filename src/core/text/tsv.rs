@@ -133,6 +133,13 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_field_survives_a_round_trip() {
+        let records = vec![record(&["E", "", "fn"])];
+
+        assert_eq!(decode(&encode(&records)).unwrap(), records);
+    }
+
+    #[test]
     fn a_blank_line_is_refused() {
         assert_eq!(decode("C\t1\n\nE\tel-0001\n"), None);
     }

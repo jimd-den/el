@@ -8,3 +8,4 @@ mod helpers;
 mod rendered_crates_compile;
 mod store_round_trip;
 mod gate_latency;
+mod restore_skips_manifest;

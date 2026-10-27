@@ -17,6 +17,13 @@ use std::collections::BTreeSet;
 pub fn tree_of(env: &super::Env<'_>, projection: &Projection) -> Result<Tree, Error> {
     let mut entries = Vec::with_capacity(projection.files.len());
     for file in &projection.files {
+        // The manifest is not a projection: it belongs to the project, not to the
+        // catalog. `el new` writes it; adoption and every later change leave it
+        // alone. A tree that does not name it is what makes a restore unable to
+        // remove it.
+        if file.path == "Cargo.toml" {
+            continue;
+        }
         let digest = env
             .journal
             .put_blob(file.text.as_bytes())
@@ -78,9 +85,14 @@ pub fn materialize(
 }
 
 /// Put `tree` back on disk exactly: write every blob, then remove every owned
-/// path the tree does not name. Only `src/**` and `Cargo.toml` are owned.
+/// path the tree does not name. Only `src/**` is owned; a tree recorded before the
+/// manifest became unowned can still name it, and restoring that blob would write
+/// over the user's current manifest.
 pub fn restore(env: &super::Env<'_>, tree: &Tree) -> Result<(), Error> {
     for (path, digest) in tree.entries() {
+        if path == "Cargo.toml" {
+            continue;
+        }
         let bytes = env.journal.get_blob(digest).map_err(error::store)?;
         env.fs.write(path, &bytes).map_err(error::filesystem)?;
     }
@@ -90,9 +102,6 @@ pub fn restore(env: &super::Env<'_>, tree: &Tree) -> Result<(), Error> {
         if !known.contains(path.as_str()) {
             env.fs.remove(&path).map_err(error::filesystem)?;
         }
-    }
-    if !known.contains("Cargo.toml") {
-        env.fs.remove("Cargo.toml").map_err(error::filesystem)?;
     }
     Ok(())
 }
@@ -111,6 +120,9 @@ pub fn check_drift(
     let mut notes = Vec::new();
 
     for file in &projection.files {
+        if file.path == "Cargo.toml" {
+            continue;
+        }
         let Some(bytes) = env.fs.read(&file.path).map_err(error::filesystem)? else {
             return Err(drift(&file.path, "is missing"));
         };

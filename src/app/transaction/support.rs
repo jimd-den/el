@@ -167,6 +167,7 @@ pub(super) fn add() -> Mutation {
             body: Body::default(),
         mode: BodyMode::Split,
         }],
+        origins: Vec::new(),
         dry_run: false,
         strict: false,
         fast: false,

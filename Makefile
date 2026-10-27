@@ -8,4 +8,10 @@ lint:
 	cargo clippy --all-targets -- -D warnings
 typecheck:
 	cargo check --all-targets
-check: budget test lint typecheck
+dogfood:
+	cargo run -q -- check --root .
+footprint:
+	tools/footprint.sh
+bench-solution:
+	tools/slm-bench.sh --solution
+check: budget test lint typecheck dogfood

@@ -58,3 +58,28 @@ fn an_impl_declares_without_a_name() {
 
     assert_eq!(declaration(&element), "impl Display for Point");
 }
+
+#[test]
+fn an_opaque_module_renders_its_file_byte_for_byte() {
+    use crate::core::model::element::{BodyMode, NewElement};
+    use crate::core::model::kind::Kind;
+
+    let mut catalog = crate::core::model::catalog::Catalog::new();
+    let id = catalog
+        .add_element(&NewElement {
+            kind: Kind::Module,
+            module: "src/main.rs",
+            signature: "mod main",
+            visibility: Visibility::Private,
+        })
+        .expect("module");
+    catalog.add_stmt(id, "fn main() {\n    println!(\"hi\");\n}\n").expect("body");
+    catalog.find_mut(id).expect("module").mode = BodyMode::Opaque;
+
+    let projection = crate::core::render::render(&catalog, "opaque");
+
+    assert_eq!(
+        projection.file("src/main.rs").expect("file").text,
+        "fn main() {\n    println!(\"hi\");\n}\n"
+    );
+}

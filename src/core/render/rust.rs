@@ -24,6 +24,21 @@ pub fn render_module(
     node: &Node,
     spans: &mut Collector,
 ) -> String {
+    if let Some(element) = catalog.elements.iter().find(|element| {
+        element.kind == Kind::Module && element.module == node.path
+    }) && element.mode == crate::core::model::element::BodyMode::Opaque
+    {
+        let text: String = catalog
+            .children_of(element.id)
+            .iter()
+            .map(|stmt| stmt.text.as_str())
+            .collect();
+        let lines = text.lines().count() as u32;
+        if lines > 0 {
+            spans.push(&node.path, 1, lines, element.id);
+        }
+        return text;
+    }
     let mut out = Out::new();
     out.bare(style::MARKER);
 

@@ -14,7 +14,8 @@ use super::request::{Command, Globals, Mv, Parsed};
 /// the two drift apart.
 pub const VERBS: &[&str] = &[
     "new", "init", "add", "batch", "edit", "rm", "mv", "run", "log", "version", "ls", "tree",
-    "show", "find", "diff", "undo", "redo", "revert", "doctor",
+    "show", "find", "explain", "diff", "undo", "redo", "revert", "doctor", "skill", "help",
+    "apply", "check",
 ];
 
 /// Parse a whole command line.
@@ -22,17 +23,37 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
     let args = Args::split(argv)?;
     let verb = args.words.first().cloned().unwrap_or_default();
     let globals = globals(&args)?;
+    if args.has("--help") || verb == "help" {
+        let verb = if verb == "help" {
+            args.words.get(1).cloned()
+        } else {
+            args.words.first().cloned()
+        };
+        return Ok(Parsed {
+            globals,
+            command: Command::Help { verb },
+        });
+    }
     let command = match verb.as_str() {
         "new" => Command::New {
             path: args.required("new")?,
             lib: args.has("--lib"),
             policy: args.has("--policy"),
+            edition: args.value("--edition")?,
         },
         "init" => Command::Init {
             force: args.has("--force"),
         },
         "add" => Command::Add(super::parse_mutate::add(&args)?),
         "batch" => Command::Batch,
+        "apply" => Command::Apply {
+            file: args.words.get(1).cloned(),
+        },
+        "skill" => Command::Skill,
+        "check" => Command::Check,
+        "explain" => Command::Explain {
+            id: args.required("explain")?,
+        },
         "edit" => Command::Edit(super::parse_mutate::edit(&args)?),
         "rm" => Command::Rm {
             ids: args.words[1..].to_vec(),
@@ -105,8 +126,11 @@ fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
         Command::Mv(_) => 3,
         Command::Add(_) => 3,
         Command::Batch => 1,
-        Command::Edit(_) | Command::Show(_) | Command::Find(_) => 2,
-        Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. } => 1,
+        Command::Edit(_) | Command::Show(_) | Command::Find(_) | Command::Explain { .. }
+        | Command::Apply { .. } => 2,
+        Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. }
+        | Command::Skill | Command::Check => 1,
+        Command::Help { .. } => usize::MAX,
         Command::Diff { .. } => 3,
         Command::Undo { .. } | Command::Revert { .. } => 2,
         Command::Redo | Command::Doctor { .. } => 1,

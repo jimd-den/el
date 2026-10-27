@@ -19,9 +19,24 @@ use crate::core::model::change::Change;
 use crate::core::model::element::{BodyMode, Visibility};
 use crate::core::model::kind::Kind;
 
-const POLICY: &str = "ceiling = 200\nmax_fn_lines = 15\nrequire_preamble = true\nforbid = unsafe\ndeps = none\ngate = check\n";
+pub(crate) const POLICY: &str = "ceiling = 200\nmax_fn_lines = 15\nrequire_preamble = true\nforbid = unsafe\ndeps = none\ngate = check\n";
 
-pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: bool) -> Report {
+pub fn new(
+    env: &Env<'_>,
+    globals: &Globals,
+    path: &str,
+    lib: bool,
+    _policy: bool,
+    edition: Option<&str>,
+) -> Report {
+    if let Some(edition) = edition
+        && edition != "2024"
+    {
+        return Report::fail(
+            "new",
+            error::unsupported("new", &format!("--edition {edition} (only 2024 is built)")),
+        );
+    }
     if globals.dry_run {
         return Report::fail("new", error::unsupported("new", "--dry-run"));
     }
@@ -37,6 +52,10 @@ pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: boo
     }
     if let Err(error) = seed(env) {
         return Report::fail("new", error);
+    }
+    let manifest = crate::core::render::manifest::render(&env.crate_name);
+    if let Err(error) = env.fs.write("Cargo.toml", manifest.as_bytes()) {
+        return Report::fail("new", error::filesystem(error));
     }
 
     let root = if lib { "src/lib.rs" } else { "src/main.rs" };
@@ -63,6 +82,7 @@ pub fn new(env: &Env<'_>, globals: &Globals, path: &str, lib: bool, _policy: boo
             target: "-".to_string(),
             message: format!("created {}", env.crate_name),
             changes: vec![change],
+            origins: Vec::new(),
             dry_run: false,
             strict: globals.strict,
             // The scaffold is not a user change: it always runs at L0, and

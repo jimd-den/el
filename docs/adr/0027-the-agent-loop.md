@@ -31,9 +31,10 @@ is staged — the same naming serves every multi-change mutation — and a
 gate rejection restores the old tree and journals one
 `rejected:<n>` attempt whose diagnostics name batch items through their
 aliases. `--dry-run` previews the whole batch; `--fast` and `--strict`
-pass through as for `add`. Statements, anchors, `--doc`, and preambles
-are refused `usage.unsupported` in v1: statements need ids that do not
-exist until planning, and the other three have separate semantics.
+pass through as for `add`. Statements, anchors and `--doc` are refused
+`usage.unsupported` in v1: statements need ids that do not exist until
+planning, and the other two have separate semantics. A module item's
+`body` is its preamble, which is the one place a batch may write prose.
 Rejected alternative: one transaction per item (the `apply` shape) —
 that is exactly the partial application this decision forbids.
 

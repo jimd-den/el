@@ -4,6 +4,7 @@
 // there is no snapshot to rebuild from.
 
 use super::super::{error, load, transaction, Env, Report};
+use crate::core::text::json::Json;
 
 pub fn doctor(env: &Env<'_>, repair: bool, rebuild: bool) -> Report {
     if repair {
@@ -67,26 +68,46 @@ fn run_rebuild(env: &Env<'_>) -> Report {
 
 fn health(env: &Env<'_>) -> Report {
     let mut report = Report::new("doctor");
-    report.lines.push(format!("root        {}", env.root));
-    match env.journal.version() {
-        Ok(version) => report.lines.push(format!("version     {}", version.unwrap_or_else(|| "-".to_string()))),
-        Err(error) => report.lines.push(format!("version     error: {error}")),
-    }
-    match env.journal.head() {
-        Ok(head) => report.lines.push(format!("head        {}", head.map_or("-".to_string(), |h| h.to_string()))),
-        Err(error) => report.lines.push(format!("head        error: {error}")),
-    }
-    match env.journal.entries() {
-        Ok(entries) => report.lines.push(format!("journal     {} entries", entries.len())),
-        Err(error) => report.lines.push(format!("journal     error: {error}")),
-    }
-    match env.journal.attic_entries() {
-        Ok(entries) => report.lines.push(format!("attic       {} entries", entries.len())),
-        Err(error) => report.lines.push(format!("attic       error: {error}")),
-    }
-    report.lines.push(format!("inflight    {}", inflight(env)));
-    report.lines.push(format!("drift       {}", drift(env)));
-    report.lines.push(format!("objects     {}", objects(env)));
+    let version = match env.journal.version() {
+        Ok(version) => version.unwrap_or_else(|| "-".to_string()),
+        Err(error) => format!("error: {error}"),
+    };
+    let head = match env.journal.head() {
+        Ok(head) => head.map_or("-".to_string(), |h| h.to_string()),
+        Err(error) => format!("error: {error}"),
+    };
+    let journal = match env.journal.entries() {
+        Ok(entries) => format!("{} entries", entries.len()),
+        Err(error) => format!("error: {error}"),
+    };
+    let attic = match env.journal.attic_entries() {
+        Ok(entries) => format!("{} entries", entries.len()),
+        Err(error) => format!("error: {error}"),
+    };
+    let inflight = inflight(env);
+    let drift = drift(env);
+    let objects = objects(env);
+
+    report.lines = vec![
+        format!("root        {}", env.root),
+        format!("version     {version}"),
+        format!("head        {head}"),
+        format!("journal     {journal}"),
+        format!("attic       {attic}"),
+        format!("inflight    {inflight}"),
+        format!("drift       {drift}"),
+        format!("objects     {objects}"),
+    ];
+    report.payload = Some(Json::Object(vec![
+        ("root".to_string(), Json::Str(env.root.clone())),
+        ("version".to_string(), Json::Str(version)),
+        ("head".to_string(), Json::Str(head)),
+        ("journal".to_string(), Json::Str(journal)),
+        ("attic".to_string(), Json::Str(attic)),
+        ("inflight".to_string(), Json::Str(inflight)),
+        ("drift".to_string(), Json::Str(drift)),
+        ("objects".to_string(), Json::Str(objects)),
+    ]));
     report
 }
 
@@ -112,11 +133,23 @@ fn drift(env: &Env<'_>) -> String {
     };
     let projection = crate::core::render::render(&catalog, &env.crate_name);
     for file in &projection.files {
+        if file.path == "Cargo.toml" {
+            continue;
+        }
         match env.fs.read(&file.path) {
             Ok(Some(bytes)) if bytes == file.text.as_bytes() => continue,
             Ok(Some(_)) => return format!("{} differs from the catalog", file.path),
             Ok(None) => return format!("{} is missing", file.path),
             Err(error) => return format!("{} could not be read ({error})", file.path),
+        }
+    }
+    let known: std::collections::BTreeSet<&str> =
+        projection.files.iter().map(|file| file.path.as_str()).collect();
+    if let Ok(paths) = env.fs.list("src") {
+        for path in paths {
+            if path.ends_with(".rs") && !known.contains(path.as_str()) {
+                return format!("{path} is not in the projection");
+            }
         }
     }
     "none".to_string()

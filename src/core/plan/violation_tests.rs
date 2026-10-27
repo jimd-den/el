@@ -7,7 +7,7 @@ use super::*;
 fn every_rule_has_its_own_code() {
     let spelled: Vec<&str> = Code::all().iter().map(|code| code.as_str()).collect();
 
-    assert_eq!(spelled.len(), 12);
+    assert_eq!(spelled.len(), 13);
     assert_eq!(spelled.len(), spelled.iter().collect::<std::collections::HashSet<_>>().len());
 }
 

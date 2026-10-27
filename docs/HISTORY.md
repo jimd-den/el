@@ -84,7 +84,7 @@ el1	42	1761266000	agent	edit	el-0007	e4b1…	9f2c…	ok:0/1/5	rename apply to ap
 | `seq` | Monotonic, zero-padded to 6 in the path only |
 | `ts` | Unix seconds, from the `Clock` port (injected; tests use a fixed clock) |
 | `actor` | `human`, `agent`, `ci`, or `$EL_ACTOR`; free-form but sanitized |
-| `op` | `init`, `add`, `edit`, `rm`, `mv`, `dep`, `policy`, `adopt`, `import`, `revert`, `repair` |
+| `op` | `init`, `add`, `edit`, `rm`, `mv`, `dep`, `policy`, `adopt`, `import`, `revert`, `repair`, `apply` |
 | `target` | Element id, module path, dep name, or `-` for batch/repair |
 | `from`, `to` | Tree digests: what it was, what it became |
 | `gate` | `ok:new/fixed/existing`, `rejected:<n>`, `preview:<n>`, `skip`, `model`, `ra` |

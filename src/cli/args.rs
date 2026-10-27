@@ -22,7 +22,7 @@ pub const BOOL_FLAGS: &[&str] = &[
     "--json", "--quiet", "--dry-run", "--yes", "--no-color", "--fast", "--strict",
     "--semantic", "--verbose", "--lib", "--policy", "--force", "--cascade", "--attic",
     "--repair", "--rebuild", "--statements", "--source", "--history", "--terse",
-    "--opaque",
+    "--opaque", "--help",
 ];
 
 /// A command line `el` refuses to understand.

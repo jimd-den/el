@@ -131,13 +131,18 @@ records it — the user never sees an inflated "41 new errors" on the first comm
 
 ```text
 el: change rejected — 1 new error (0 fixed, 4 pre-existing)
-  error[E0308] src/core/plan.rs:41  el-0102  (in el-0007 core::plan::apply)
+  error[E0308] src/core/plan.rs:41  el-0102  (in el-0007 core::plan::apply)  (first actionable)
+    expected `u32`, found `&u32`
+  error[E0308] src/core/plan.rs:42  el-0103  (in el-0007 core::plan::apply)
     expected `u32`, found `&u32`
 el: no files changed; history unchanged (attempt recorded as seq 42, gate=rejected:1)
 ```
 
 Three counts, always: new, fixed, pre-existing. A user who fixes ten errors and breaks one
-sees both facts.
+sees both facts. Exactly one new diagnostic is marked `first_actionable`: the first one
+attributed to an element the change touched, else the first exact one, else the first in the
+compiler's order. The rule is deterministic, so an agent that retries the same change is sent
+to the same line.
 
 ### 4.4 What counts as a rejection
 

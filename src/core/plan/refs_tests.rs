@@ -159,3 +159,36 @@ fn renaming_a_function_leaves_a_method_of_the_same_name_alone() {
 
     assert_eq!(only_statement(&catalog, caller), "plan.apply();");
 }
+
+#[test]
+fn a_struct_associated_path_is_rewritten() {
+    let mut catalog = Catalog::new();
+    let task = catalog
+        .add_element(&NewElement {
+            kind: Kind::Struct,
+            module: "src/a.rs",
+            signature: "struct Task",
+            visibility: Visibility::Private,
+        })
+        .expect("struct");
+    let run = element(&mut catalog, "fn run()");
+    catalog.add_stmt(run, "Task::new();").expect("stmt");
+    catalog.rename(task, "Job").expect("rename");
+
+    rename_references(&mut catalog, task, "Task");
+
+    assert_eq!(only_statement(&catalog, run), "Job::new();");
+}
+
+#[test]
+fn a_turbofish_call_is_rewritten() {
+    let mut catalog = Catalog::new();
+    let apply = element(&mut catalog, "fn apply()");
+    let run = element(&mut catalog, "fn run()");
+    catalog.add_stmt(run, "apply::<u8>();").expect("stmt");
+    catalog.rename(apply, "dispatch").expect("rename");
+
+    rename_references(&mut catalog, apply, "apply");
+
+    assert_eq!(only_statement(&catalog, run), "dispatch::<u8>();");
+}

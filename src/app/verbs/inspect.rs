@@ -58,6 +58,32 @@ pub fn find(env: &Env<'_>, query: &str) -> Report {
     report("find", view)
 }
 
+pub fn explain(env: &Env<'_>, id: &str) -> Report {
+    let id = match change::parse_id(id) {
+        Ok(id) => id,
+        Err(error) => return Report::fail("explain", error),
+    };
+    let (catalog, _) = match prepare(env) {
+        Ok(loaded) => loaded,
+        Err(error) => return Report::fail("explain", error),
+    };
+    let entries = match env.journal.entries() {
+        Ok(entries) => entries,
+        Err(error) => return Report::fail("explain", error::store(error)),
+    };
+    let element = match catalog.find(id) {
+        Some(element) => element,
+        None => match catalog.find_stmt(id) {
+            Some(stmt) => match catalog.find(stmt.owner) {
+                Some(owner) => owner,
+                None => return Report::fail("explain", missing(id)),
+            },
+            None => return Report::fail("explain", missing(id)),
+        },
+    };
+    report("explain", crate::app::inspect::explain(&catalog, &entries, element))
+}
+
 pub fn show(
     env: &Env<'_>,
     id: &str,

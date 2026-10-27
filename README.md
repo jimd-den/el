@@ -19,14 +19,13 @@ head 3 -> 2
 That is the actual transcript, not a target: the id is the one the tool printed, and
 the second line says what it wrote.
 
-**Design status: M8.** `el new`, `add`, `batch`, `edit`, `rm`, `mv`, `run`, `log`, `diff`,
+**Design status: M12.** `el new`, `add`, `batch`, `edit`, `rm`, `mv`, `run`, `log`, `diff`,
 `undo`, `redo`, `revert`, `doctor`, `ls`, `tree`, `show`, `find`, statement
 insert/edit/reorder, and the split policy work in a real crate, with the lock, inflight
 recovery, drift detection, a content-addressed store, and a body grammar that supplies
 closing braces and semicolons. The default gate is L1 (`check`, from the `el.policy` that
 `el new` writes); `--fast` drops to L0 (`model`) and `--strict` runs clippy. Specified but
-unbuilt: `apply`, `refs`, `explain`, `catalog`, `skill`, `--help`, `check`, `test`,
-`build`, `fix`, `search`, `doc`. `make check` is green.
+unbuilt: `refs`, `catalog`, `test`, `build`, `fix`, `search`, `doc`. `make check` is green.
 
 ---
 
@@ -47,8 +46,10 @@ unbuilt: `apply`, `refs`, `explain`, `catalog`, `skill`, `--help`, `check`, `tes
 
 ## The three promises
 
-1. **Verified before committed.** A change either compiles or is not applied. `--dry-run` is a
-   true preview because it is the same transaction, restored.
+1. **Verified before committed.** Under the default compiler gate, a change either compiles or
+   is not applied. `--fast` is the explicit exception: it runs L0 only and can commit a tree the
+   compiler would refuse. `--dry-run` is a true preview because it is the same transaction,
+   restored.
 2. **Exactly reversible.** Content-addressed snapshots; `el undo` restores bytes, not intent
    (and says so).
 3. **Nothing to install but one file.** Zero crates, `std` only. `cargo` is required;

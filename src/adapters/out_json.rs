@@ -37,6 +37,7 @@ pub fn render(report: &Report) -> String {
                 ("code".to_string(), text(error.code)),
                 ("exit".to_string(), count(error.exit.code() as usize)),
                 ("message".to_string(), text(&error.message)),
+                ("hint".to_string(), text(error.hint())),
             ]),
         ),
         None => {
@@ -107,6 +108,10 @@ fn diag_json(diag: &GateDiagnostic) -> Json {
     fields.push(("col".to_string(), count(diag.col as usize)));
     fields.push(("message".to_string(), text(&diag.message)));
     fields.push(("exact".to_string(), Json::Bool(diag.exact)));
+    fields.push((
+        "first_actionable".to_string(),
+        Json::Bool(diag.first_actionable),
+    ));
     Json::Object(fields)
 }
 

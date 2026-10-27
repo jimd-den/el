@@ -62,7 +62,7 @@ fn a_failure_envelope_carries_the_code_and_the_exit_code_and_no_seq() {
 
     assert!(text.contains(r#""ok":false"#), "{text}");
     assert!(
-        text.contains(r#""error":{"code":"model.ceiling","exit":2,"message":"src/core/plan.rs would be 204 lines"}"#),
+        text.contains(r#""error":{"code":"model.ceiling","exit":2,"message":"src/core/plan.rs would be 204 lines","hint":"el ls"}"#),
         "{text}"
     );
     assert!(!text.contains(r#""seq""#), "a refusal has no sequence number: {text}");

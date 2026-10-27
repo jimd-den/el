@@ -64,16 +64,20 @@ Statement ids (`el-0101`) work anywhere an id works. A statement's owner is show
 ### 4.1 Create
 
 ```text
-el new <path> [--lib] [--bin] [--edition 2024] [--policy] [--json]
+el new <path> [--lib] [--edition 2024] [--policy] [--json]
 el init [--force]
 ```
 
 `new` writes a crate with `src/main.rs` (or `src/lib.rs`), an empty manifest, `el.policy`
 with the `AGENTS.md` defaults, `.gitignore`, and
 `.el/` seeded with entry seq 1 (`init`) followed by the root module's `add` entry — the two
-entries are one command's history, not two commands. `init` adopts an existing directory:
-everything under `src/` is imported as opaque modules (`ADR-0009`), so nothing is lost and
-nothing is silently rewritten. `init` is not in M6.
+entries are one command's history, not two commands. `init` adopts an existing directory: everything under `src/` is
+imported as one opaque module per file (`ADR-0009`), so nothing is lost and nothing is
+silently rewritten. It writes no projection: it verifies the render is byte-for-byte what is
+on disk before recording the tree. `el.policy` and `.gitignore` are written only if absent, and
+the manifest is never rewritten. Element-level `add`/`mv` into an adopted file is refused
+(`model.opaque`); edit the whole file with `el edit <module> --body <file> --body-mode opaque`.
+`--force` and `--dry-run` are refused.
 
 ### 4.2 Mutate
 
@@ -130,8 +134,13 @@ edit el-0007 --rename apply_change
 rm el-0011
 ```
 
-The whole script is one transaction: one journal entry, one gate, all-or-nothing (`FR-10`).
-`apply` is specified but unbuilt; `batch` below is the built half of the same intent.
+The whole script is one transaction: one journal entry (op `apply`), one gate, all-or-nothing
+(`FR-10`). Every line goes through the same parser as argv, so a script and a command line
+cannot disagree about a flag. A line may carry `add`, `edit`, `mv` or `rm`; global flags belong
+to `apply` itself, `--body -` is refused (the script owns stdin), and an id must exist when the
+script starts — an element added on an earlier line has no id until planning, so edit it in a
+later `apply` rather than guessing. A plan refusal names the line: `apply line 3: change 2 …`.
+A gate rejection restores the tree and journals one `rejected:<n>` attempt, as `batch` does.
 
 `batch` is `apply`'s JSON sibling, built: it reads a JSON array from stdin, one
 object per `add` (`kind`, `name`, `in`, `vis`, `sig`, `body`; a module item's
@@ -164,8 +173,11 @@ el catalog [--json]
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |
 
-`explain`, `refs` and `catalog` are specified but unbuilt: the CLI has no such verbs yet.
-`find` covers the "which ids answer to this name" question until `refs` lands.
+`explain` is built and catalog-only: module preamble, doc text, whole-word callers, functions
+named like tests, and the last five entries. It prints `source  catalog (rust-analyzer not
+built)` because it has not looked at the semantics.
+`refs` and `catalog` are specified but unbuilt: the CLI has no such verbs yet. `find` covers
+the "which ids answer to this name" question until `refs` lands.
 
 ### 4.4 Verify
 
@@ -177,12 +189,17 @@ el run   [-- <program args>] [--json]
 el fix   <id> (--list | --apply <code>:<n>) [--json]
 ```
 
-`check`, `test`, `build` and `fix` are specified but unbuilt: the CLI has no
-such verbs yet. `run` does **not** gate first — after drift refusal, disk
-equals the head projection, so a gate would judge an empty delta; ambient
-files outside the projection (such as `build.rs`) are surfaced by `cargo run`
-itself. When `check` lands, its job is diagnostics reporting plus baseline
-writing, not refusal (ADR-0026).
+`check` is built: it runs the tier the policy selects (or `--fast`/`--strict`), reports every
+diagnostic the compiler gave, and writes nothing — reporting, not refusal (ADR-0026). It exits
+3 when an error is present, 0 otherwise. With no catalog (a plain Cargo crate) diagnostics are
+un-attributed and the page says so; with a catalog the same span map the gate uses attributes
+them. `gate.new` and `gate.fixed` are 0 because there is no baseline comparison yet; the set is
+in `gate.diagnostics` and counted in `gate.existing`. Baseline writing after `check` is
+deferred.
+`test`, `build` and `fix` are specified but unbuilt: the CLI has no such verbs yet. `run` does
+**not** gate first — after drift refusal, disk equals the head projection, so a gate would
+judge an empty delta; ambient files outside the projection (such as `build.rs`) are surfaced
+by `cargo run` itself.
 
 `fix` lists or applies `rust-analyzer` code actions for diagnostics in that element
 (`FR-54`). Applying is a normal transaction: snapshot, edit, gate, commit or restore.
@@ -264,29 +281,42 @@ Failure:
   "el": "1",
   "cmd": "add",
   "ok": false,
-  "error": {"code": "gate.rejected", "exit": 3, "message": "1 new error"},
+  "error": {"code": "gate.rejected", "exit": 3, "message": "1 new error", "hint": "el diff"},
   "gate": {
     "tier": "check", "new": 1, "fixed": 0, "existing": 4, "verdict": "rejected",
     "diagnostics": [{
       "code": "E0308", "level": "error",
       "el": "el-0102", "owner": "el-0007",
       "path": "src/core/plan.rs", "line": 41, "col": 9,
-      "message": "mismatched types: expected u32, found &u32", "exact": true
+      "message": "mismatched types: expected u32, found &u32", "exact": true,
+      "first_actionable": true
     }]
   }
 }
 ```
 
-Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `seq`, `changed[].op`,
-`changed[].id`, `gate.*`, `diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
+Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `error.hint`, `seq`,
+`changed[].op`, `changed[].id`, `gate.*`,
+`diagnostics[].{code,level,el,owner,path,line,col,message,exact,first_actionable}`.
 A diagnostic the compiler gives no code for — a parse error — reports `uncoded`, never an
 empty string, because `code` is part of the diagnostic's identity.
 
 Error codes are namespaced and stable:
-`usage.unknown_flag`, `usage.unsupported`, `usage.bad_batch`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,
-`model.cross_body_move`, `gate.rejected`, `env.missing_tool`, `env.tool_failed`, `env.timeout`,
-`env.bad_policy`, `env.drift`, `env.offline_miss`,
-`conflict.locked`, `notfound.element`, `ra.timeout`, `internal.panic`.
+`usage.unknown_verb`, `usage.unknown_flag`, `usage.unknown_kind`, `usage.missing_verb`,
+`usage.missing_argument`, `usage.missing_value`, `usage.repeated_flag`, `usage.bad_value`,
+`usage.unexpected_argument`, `usage.unsupported`, `usage.no_change`, `usage.bad_batch`,
+`usage.bad_script`,
+`usage.exists`, `model.duplicate_alias`, `model.unknown_ref`, `model.cross_body_move`,
+`model.unbalanced`, `model.bad_ident`, `model.ceiling`, `model.fn_budget`, `model.preamble`,
+`model.forbidden`, `model.dep_denied`, `model.dangling_ref`, `model.bad_stmt`, `model.opaque`,
+`gate.rejected`,
+`gate.would_reject`, `gate.failed`, `env.not_a_crate`, `env.not_a_project`, `env.drift`, `env.bad_policy`, `env.io`, `env.corrupt`,
+`env.missing_tool`, `env.tool_failed`, `env.timeout`, `env.run_failed`, `env.offline_miss`,
+`conflict.locked`, `notfound.element`, `notfound.sequence`, `ra.timeout`, `internal.panic`.
+
+Every refusal names a next command. Human output prints it on a `next: el …` line; the
+envelope carries it as `error.hint`. The hint is checked by a test that parses it with the
+same parser the user's next command will use, so a hint cannot name a command `el` refuses.
 
 ---
 
@@ -303,6 +333,9 @@ show  data = {id, kind, alias|null, module, visibility, signature, doc|null,
               mode, sequence|null, statements: [id],
               statement_tree?, source?, history?}
 find  data = [{id, kind, alias|null, module}]
+explain data = {id, kind, alias|null, module, signature, preamble|null, doc|null,
+              callers: [{id, alias, text}], tests: [{id, alias}],
+              history: [{seq, op, gate, msg}], source}
 ```
 
 `statement_tree` is `[{id, text, children: [...]}]` and appears only with

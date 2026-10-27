@@ -66,7 +66,7 @@ fn log_reads_a_count() {
 
 #[test]
 fn a_new_crate_can_be_a_library_with_a_policy_file() {
-    let Command::New { path, lib, policy } = parsed("new hello --lib --policy").command else {
+    let Command::New { path, lib, policy, .. } = parsed("new hello --lib --policy").command else {
         panic!("not a new");
     };
 
@@ -86,8 +86,9 @@ fn an_unknown_verb_is_a_usage_error_that_names_itself() {
 fn an_unknown_verb_names_only_verbs_that_exist() {
     let refusal = refused("frobnicate");
 
-    assert!(!refusal.message.contains("skill"), "{refusal}");
-    assert!(refusal.message.contains("show"), "{refusal}");
+    let known = refusal.message.split("el knows ").nth(1).expect("the list");
+    assert!(known.contains("show"), "{refusal}");
+    assert!(known.contains("skill"), "{refusal}");
 }
 
 #[test]

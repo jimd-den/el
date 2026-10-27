@@ -4,7 +4,8 @@
 // opening the file it lives in.
 
 use super::View;
-use self::context::{doc_of, mentions, owning_sequence, source_of};
+pub(crate) use self::context::{doc_of, mentions};
+use self::context::{owning_sequence, source_of};
 use self::detail::{entry_json, statement_json, statement_lines};
 use crate::core::history::entry::Entry;
 use crate::core::model::catalog::Catalog;

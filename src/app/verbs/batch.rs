@@ -34,6 +34,18 @@ pub fn parse_batch(stdin: &str) -> Result<Vec<Add>, Error> {
 }
 
 fn parse_item(item: &Json, index: usize) -> Result<Add, Error> {
+    const KEYS: &[&str] = &["kind", "name", "in", "vis", "sig", "body"];
+    let Json::Object(fields) = item else {
+        return Err(item_error(index, "must be an object"));
+    };
+    for (key, value) in fields {
+        if !KEYS.contains(&key.as_str()) {
+            return Err(item_error(index, &format!("unknown field {key:?}")));
+        }
+        if value.as_str().is_none() {
+            return Err(item_error(index, &format!("{key} must be a string")));
+        }
+    }
     let field = |name: &str| item.get(name).and_then(Json::as_str).map(str::to_string);
     let kind = field("kind").ok_or_else(|| item_error(index, "needs a kind"))?;
     let kind = Kind::parse(&kind)
@@ -111,6 +123,7 @@ pub fn batch(env: &Env<'_>, globals: &Globals, stdin: &str) -> Report {
             target: format!("batch {count}"),
             message: format!("batch {count} adds"),
             changes,
+            origins: Vec::new(),
             dry_run: globals.dry_run,
             strict: globals.strict,
             fast: globals.fast,
