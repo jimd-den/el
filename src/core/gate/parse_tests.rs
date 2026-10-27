@@ -107,3 +107,16 @@ fn a_malformed_line_is_skipped_not_fatal() {
 
     assert!(found.is_empty());
 }
+
+/// A parse error has no diagnostic code in cargo's JSON (`"code": null`). The
+/// contract says `diagnostics[].code` is a stable field, and an empty string is
+/// not a value: two different uncoded errors look alike.
+#[test]
+fn a_frame_without_a_code_says_so_instead_of_leaving_it_empty() {
+    let text = r#"{"reason":"compiler-message","message":{"level":"error","message":"expected one of `->`, `<`, `where`, or `{`, found `b`","code":null,"spans":[{"file_name":"src/main.rs","line_start":19,"column_start":6,"is_primary":true}]}}"#;
+
+    let found = parse_cargo_json(text, &never_attribute);
+
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].code, "uncoded");
+}

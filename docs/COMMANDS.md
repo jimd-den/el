@@ -279,6 +279,8 @@ Failure:
 
 Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `seq`, `changed[].op`,
 `changed[].id`, `gate.*`, `diagnostics[].{code,level,el,owner,path,line,col,message,exact}`.
+A diagnostic the compiler gives no code for — a parse error — reports `uncoded`, never an
+empty string, because `code` is part of the diagnostic's identity.
 
 Error codes are namespaced and stable:
 `usage.unknown_flag`, `usage.unsupported`, `usage.bad_batch`, `model.duplicate_alias`, `model.ceiling`, `model.dangling_ref`,

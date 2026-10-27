@@ -32,11 +32,14 @@ pub fn parse_cargo_json(stdout: &str, attribute: &Attribute<'_>) -> Vec<Diagnost
         else {
             continue;
         };
+        // A parse error carries no code (`"code": null`). `uncoded` is a value
+        // rather than an empty string: `diagnostics[].code` is a published field,
+        // and two different uncoded errors must not share one spelling.
         let code = message
             .get("code")
             .and_then(|code| code.get("code"))
             .and_then(Json::as_str)
-            .unwrap_or("")
+            .unwrap_or("uncoded")
             .to_string();
         let raw = message
             .get("message")
