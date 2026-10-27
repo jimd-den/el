@@ -23,7 +23,7 @@ pub use batch::batch;
 pub use diff::diff;
 pub use doctor::doctor;
 pub use history::{redo, revert, undo};
-pub use inspect::{find, ls, show, tree};
+pub use inspect::{explain, find, ls, show, tree};
 pub use read::{log, run, version};
 
 /// The one page `el skill`, `el help` and `--help` print. It reads the CLI's own

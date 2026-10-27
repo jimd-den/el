@@ -85,6 +85,7 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
             verbs::show(env, &show.id, show.statements, show.source, show.history, show.terse)
         }
         Command::Find(find) => verbs::find(env, &find.query),
+        Command::Explain { id } => verbs::explain(env, id),
         Command::Batch => verbs::batch(env, &parsed.globals, stdin),
         Command::Apply { file } => verbs::apply(env, &parsed.globals, file.as_deref(), stdin),
         Command::Skill => verbs::guide("skill"),

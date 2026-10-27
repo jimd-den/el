@@ -169,8 +169,11 @@ el catalog [--json]
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |
 
-`explain`, `refs` and `catalog` are specified but unbuilt: the CLI has no such verbs yet.
-`find` covers the "which ids answer to this name" question until `refs` lands.
+`explain` is built and catalog-only: module preamble, doc text, whole-word callers, functions
+named like tests, and the last five entries. It prints `source  catalog (rust-analyzer not
+built)` because it has not looked at the semantics.
+`refs` and `catalog` are specified but unbuilt: the CLI has no such verbs yet. `find` covers
+the "which ids answer to this name" question until `refs` lands.
 
 ### 4.4 Verify
 
@@ -320,6 +323,9 @@ show  data = {id, kind, alias|null, module, visibility, signature, doc|null,
               mode, sequence|null, statements: [id],
               statement_tree?, source?, history?}
 find  data = [{id, kind, alias|null, module}]
+explain data = {id, kind, alias|null, module, signature, preamble|null, doc|null,
+              callers: [{id, alias, text}], tests: [{id, alias}],
+              history: [{seq, op, gate, msg}], source}
 ```
 
 `statement_tree` is `[{id, text, children: [...]}]` and appears only with

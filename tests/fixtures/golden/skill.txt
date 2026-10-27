@@ -16,6 +16,7 @@ verbs
   tree     tree [--statements]                        outline the crate
   show     show <id> [--statements|--source|--history|--terse] one element
   find     find <query>                               ids for a name, no bodies
+  explain  explain <id>                               preamble, doc, callers, tests, history
   log      log [-n <count>] [--attic]                 the journal
   diff     diff [<a>] [<b>]                           elements and files between sequences
   undo     undo [<n>]                                 move head back

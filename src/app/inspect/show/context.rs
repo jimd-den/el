@@ -9,7 +9,7 @@ use crate::core::model::element::Element;
 use crate::core::model::kind::Kind;
 use crate::core::render::Projection;
 
-pub(super) fn doc_of(catalog: &Catalog, element: &Element) -> Option<String> {
+pub(crate) fn doc_of(catalog: &Catalog, element: &Element) -> Option<String> {
     let statements: Vec<String> = catalog
         .children_of(element.id)
         .into_iter()
@@ -43,7 +43,7 @@ pub(super) fn owning_sequence(entries: &[Entry], element: &Element) -> Option<u6
         .map(|entry| entry.seq)
 }
 
-pub(super) fn mentions(entry: &Entry, element: &Element) -> bool {
+pub(crate) fn mentions(entry: &Entry, element: &Element) -> bool {
     let id = element.id.to_string();
     if entry.target == id || entry.msg.contains(&id) {
         return true;

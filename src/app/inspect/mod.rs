@@ -6,11 +6,13 @@
 // are `verbs::inspect`'s questions, and keeping them there is what makes these
 // functions testable without a filesystem.
 
+mod explain;
 mod find;
 mod ls;
 mod show;
 mod tree;
 
+pub use explain::explain;
 pub use find::find;
 pub use ls::{Filter, ls};
 pub use show::{Options, show, statement};
