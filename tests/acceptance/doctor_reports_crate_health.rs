@@ -46,3 +46,32 @@ fn an_interrupted_transaction_is_named_with_the_command_that_clears_it() {
     assert!(text.contains("inflight"), "{text}");
     assert!(text.contains("--repair"), "{text}");
 }
+
+#[test]
+fn doctor_json_carries_the_health_fields() {
+    let built = build("doctor-json");
+
+    let output = el(&built.hello, &["doctor", "--json"]);
+
+    ok(&output, "doctor --json");
+    let text = String::from_utf8_lossy(&output.stdout);
+    let json = el::core::text::json::parse(text.trim()).expect("one object");
+    let data = json.get("data").expect("data");
+    assert_eq!(data.get("drift").and_then(|v| v.as_str()), Some("none"), "{text}");
+    assert_eq!(data.get("inflight").and_then(|v| v.as_str()), Some("none"), "{text}");
+    assert!(data.get("head").is_some(), "{text}");
+    assert!(data.get("objects").is_some(), "{text}");
+}
+
+#[test]
+fn an_extra_source_file_is_reported_as_not_in_the_projection() {
+    let built = build("doctor-extra");
+    fs::write(built.hello.join("src/extra.rs"), "// not in the catalog\n").expect("extra");
+
+    let output = el(&built.hello, &["doctor"]);
+
+    ok(&output, "doctor");
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("src/extra.rs"), "{text}");
+    assert!(text.contains("not in the projection"), "{text}");
+}
