@@ -25,7 +25,10 @@ pub fn guide() -> String {
             }
         }
     }
-    out.push_str("\nkinds\n  mod fn struct enum trait impl const static type use test stmt\n");
+    out.push_str("\nkinds\n  mod fn struct enum trait impl const static type test stmt\n");
+    out.push_str("\ntest loop\n");
+    out.push_str("  add test <name> --in <module> --sig 'fn <name>()' --body -   a #[test] fn\n");
+    out.push_str("  cargo test fails before the implementation, passes after. el check does not run tests.\n");
     out.push_str("\nuniversal flags\n");
     for (flag, what) in FLAG_LINES {
         let _ = writeln!(out, "  {flag:<14} {what}");
@@ -36,7 +39,7 @@ pub fn guide() -> String {
     out.push_str("\njson\n  one object on stdout; --json puts prose on stderr.\n");
     out.push_str("  keys: el cmd ok error{code,exit,message,hint} seq changed[] gate{} data?\n");
     out.push_str("  gate diagnostics carry first_actionable: exactly one is true.\n");
-    out.push_str("\nnot built: refs catalog test build fix search doc\n");
+    out.push_str("\nnot built: refs catalog build fix search doc\n");
     out
 }
 

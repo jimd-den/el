@@ -96,7 +96,7 @@ el mv <stmt> --after <stmt>            # reorder inside one body (FR-66)
 el apply [<file>|-] [--dry-run] [--json]
 ```
 
-Kinds: `mod`, `fn`, `struct`, `enum`, `trait`, `impl`, `const`, `static`, `type`, `use`,
+Kinds: `mod`, `fn`, `struct`, `enum`, `trait`, `impl`, `const`, `static`, `type`,
 `test`, `stmt`.
 
 `--body -` reads the body from stdin to EOF; `--body <file>` reads a file. Bodies are parsed
@@ -105,7 +105,8 @@ supplies the closing brace, non-tail statements gain `;`, a tail expression does
 unclosed `(`/`[` are closed, and a logical statement continues across lines while `(`/`[`
 is open. `el` still does not parse Rust expressions; `else` branches and `};` are refused
 as documented in ADR-0019.
-`el add fn` without `--body` writes `todo!()` and says so. `add mod` without `--preamble`
+`el add fn` without `--body` writes `todo!()` and says so. `el add test` without `--body`
+writes the same `todo!()`, which panics under `cargo test`: red by default. `add mod` without `--preamble`
 writes one generated comment, because `require_preamble = true` would otherwise refuse the
 module it just created.
 
@@ -196,7 +197,10 @@ un-attributed and the page says so; with a catalog the same span map the gate us
 them. `gate.new` and `gate.fixed` are 0 because there is no baseline comparison yet; the set is
 in `gate.diagnostics` and counted in `gate.existing`. Baseline writing after `check` is
 deferred.
-`test`, `build` and `fix` are specified but unbuilt: the CLI has no such verbs yet. `run` does
+`build` and `fix` are specified but unbuilt: the CLI has no such verbs yet. `test` exists
+as a kind (see §4.2); only the `el test` verb is still unbuilt. The loop's red and green
+steps are `cargo test`, not `el check`: the gate runs `cargo check`, which does not run
+tests, so a failing test commits. `run` does
 **not** gate first — after drift refusal, disk equals the head projection, so a gate would
 judge an empty delta; ambient files outside the projection (such as `build.rs`) are surfaced
 by `cargo run` itself.

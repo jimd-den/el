@@ -19,10 +19,11 @@ pub enum Kind {
     TypeAlias,
     Impl,
     Stmt,
+    Test,
 }
 
 /// Every kind, in the order they are printed.
-pub const ALL: [Kind; 10] = [
+pub const ALL: [Kind; 11] = [
     Kind::Module,
     Kind::Function,
     Kind::Struct,
@@ -33,6 +34,7 @@ pub const ALL: [Kind; 10] = [
     Kind::TypeAlias,
     Kind::Impl,
     Kind::Stmt,
+    Kind::Test,
 ];
 
 impl Kind {
@@ -53,6 +55,16 @@ impl Kind {
             Kind::TypeAlias => "type",
             Kind::Impl => "impl",
             Kind::Stmt => "stmt",
+            Kind::Test => "test",
+        }
+    }
+
+    /// The keyword the declaration starts with. A test is an `fn` with a
+    /// `#[test]` line over it, so its keyword is `fn`, not `test`.
+    pub fn decl_keyword(&self) -> &'static str {
+        match self {
+            Kind::Test => "fn",
+            other => other.as_str(),
         }
     }
 
@@ -69,7 +81,7 @@ impl Kind {
 
     /// A body is optional for most kinds, but these are meaningless without one.
     pub fn needs_body(&self) -> bool {
-        matches!(self, Kind::Function | Kind::Impl | Kind::Module)
+        matches!(self, Kind::Function | Kind::Impl | Kind::Module | Kind::Test)
     }
 
     /// Whether the item's text is followed by `{ … }` or by `;`.
@@ -86,6 +98,7 @@ impl Kind {
                 | Kind::Enum
                 | Kind::Trait
                 | Kind::Impl
+                | Kind::Test
         )
     }
 
@@ -148,5 +161,20 @@ mod tests {
     #[test]
     fn a_statement_needs_no_name() {
         assert!(!Kind::Stmt.needs_name());
+    }
+
+    #[test]
+    fn a_test_needs_a_name_and_a_body_and_a_block_but_does_not_nest() {
+        assert!(Kind::Test.needs_name());
+        assert!(Kind::Test.needs_body());
+        assert!(Kind::Test.takes_block());
+        assert!(!Kind::Test.can_nest());
+    }
+
+    #[test]
+    fn a_test_declares_with_the_fn_keyword() {
+        assert_eq!(Kind::Test.decl_keyword(), "fn");
+        assert_eq!(Kind::Function.decl_keyword(), "fn");
+        assert_eq!(Kind::Struct.decl_keyword(), "struct");
     }
 }

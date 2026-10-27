@@ -21,7 +21,7 @@ use super::kind::Kind;
 /// keyword into `head`, because `impl Display for Point` has no identifier of
 /// its own at a fixed position.
 pub fn split(kind: Kind, signature: &str) -> Option<(Option<&str>, &str)> {
-    let rest = signature.strip_prefix(kind.as_str())?;
+    let rest = signature.strip_prefix(kind.decl_keyword())?;
 
     let rest = match rest {
         "" => "",
@@ -106,5 +106,23 @@ mod tests {
             split(Kind::TypeAlias, "type Id = u32"),
             Some((Some("Id"), " = u32"))
         );
+    }
+
+    #[test]
+    fn a_test_splits_with_the_fn_keyword() {
+        assert_eq!(
+            split(Kind::Test, "fn checks_answer()"),
+            Some((Some("checks_answer"), "()"))
+        );
+    }
+
+    #[test]
+    fn a_test_sig_starting_with_test_is_refused() {
+        assert_eq!(split(Kind::Test, "test checks_answer()"), None);
+    }
+
+    #[test]
+    fn a_test_sig_starting_with_an_attribute_is_refused() {
+        assert_eq!(split(Kind::Test, "#[test] fn checks_answer()"), None);
     }
 }

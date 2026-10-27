@@ -93,7 +93,7 @@ pub fn declaration(element: &Element) -> String {
         Some(name) => format!(
             "{}{} {}{}",
             element.visibility.prefix(),
-            element.kind.as_str(),
+            element.kind.decl_keyword(),
             name,
             element.head
         ),
@@ -102,7 +102,7 @@ pub fn declaration(element: &Element) -> String {
             format!(
                 "{}{}{}{}",
                 element.visibility.prefix(),
-                element.kind.as_str(),
+                element.kind.decl_keyword(),
                 space,
                 element.head
             )
@@ -119,6 +119,14 @@ fn render_item(
 ) {
     let first = out.line();
     let declaration = declaration(element);
+
+    // The attribute is the renderer's, not the signature's: a sig starting
+    // with `#[test]` is refused, and `declaration()` stays single-line so
+    // `show`, `explain` and `diff` keep working unchanged. The span starts
+    // before this line, so `show --source` includes it.
+    if element.kind == Kind::Test {
+        out.line_at(0, "#[test]");
+    }
 
     if element.kind.takes_block() {
         out.line_at(0, &format!("{declaration} {{"));
