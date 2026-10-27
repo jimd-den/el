@@ -45,3 +45,6 @@ mod new_edition_is_honest;
 mod show_by_name_names_find;
 mod test_loop_is_red_then_green;
 mod test_without_a_body_is_red_by_default;
+mod plain_words_assemble_signatures;
+mod return_type_note_is_spoken;
+mod plain_words_red_loop;

@@ -29,6 +29,10 @@ pub fn guide() -> String {
     out.push_str("\ntest loop\n");
     out.push_str("  add test <name> --in <module> --sig 'fn <name>()' --body -   a #[test] fn\n");
     out.push_str("  cargo test fails before the implementation, passes after. el check does not run tests.\n");
+    out.push_str("\nplain words\n");
+    out.push_str("  add fn greet --takes 'name: &str' --returns String --body -   no signature syntax\n");
+    out.push_str("  add const LIMIT --type usize --value 10   the tool cannot invent a type, so say it\n");
+    out.push_str("  either --sig or the plain words, not both\n");
     out.push_str("\nuniversal flags\n");
     for (flag, what) in FLAG_LINES {
         let _ = writeln!(out, "  {flag:<14} {what}");
@@ -110,6 +114,10 @@ const FLAG_LINES: &[(&str, &str)] = &[
     ("--terse", "show: one header line"),
     ("--opaque", "ls: only opaque modules"),
     ("--in <module>", "which file the element lives in"),
+    ("--takes <params>", "fn/test: parameters, as written"),
+    ("--returns <type>", "fn/test: the return type"),
+    ("--type <type>", "const/static/type: the type"),
+    ("--value <expr>", "const/static: the value"),
     ("--after <id>", "insert or reorder after this id"),
     ("--before <id>", "insert before this id"),
     ("--at <n>", "insert at a zero-based sibling index"),

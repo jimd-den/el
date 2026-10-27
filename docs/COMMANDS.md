@@ -106,7 +106,17 @@ unclosed `(`/`[` are closed, and a logical statement continues across lines whil
 is open. `el` still does not parse Rust expressions; `else` branches and `};` are refused
 as documented in ADR-0019.
 `el add fn` without `--body` writes `todo!()` and says so. `el add test` without `--body`
-writes the same `todo!()`, which panics under `cargo test`: red by default. `add mod` without `--preamble`
+writes the same `todo!()`, which panics under `cargo test`: red by default.
+
+Plain words instead of a signature: `add fn greet --takes 'name: &str' --returns String`,
+`add const LIMIT --type usize --value 10`, `add type Id --type u32`. The flags assemble
+the signature mechanically; `--takes` and `--returns` belong to `fn` and `test`,
+`--type` and `--value` to `const` and `static`, `--type` alone to `type`. Give either
+`--sig` or the plain words, not both. A `fn` or `test` added without `--sig` and
+without `--returns`, whose body ends in a value, earns a note saying so: if that
+value is the result, declare a return type.
+
+`add mod` without `--preamble`
 writes one generated comment, because `require_preamble = true` would otherwise refuse the
 module it just created.
 

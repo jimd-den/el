@@ -43,6 +43,13 @@ pub struct Add {
     pub visibility: Option<Visibility>,
     /// `--sig`: the whole declaration, keyword first.
     pub signature: Option<String>,
+    /// Plain-words flags, assembled into a signature by `head::signature`.
+    /// `--takes` and `--returns` belong to `fn` and `test`; `--type` and
+    /// `--value` belong to `const`, `static` and `type`.
+    pub takes: Option<String>,
+    pub returns: Option<String>,
+    pub decl_type: Option<String>,
+    pub value: Option<String>,
     pub body: Option<Source>,
     pub doc: Option<Source>,
     /// `--preamble`: a module's prose, which is a statement on the module element.

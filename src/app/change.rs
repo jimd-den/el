@@ -17,6 +17,7 @@ use crate::core::plan::policy::Split;
 
 mod body;
 mod head;
+mod words;
 mod describe;
 
 #[cfg(test)]
@@ -24,6 +25,7 @@ mod describe;
 mod change_tests;
 
 pub use describe::describe;
+pub(crate) use words::{return_note, RETURN_NOTE};
 
 pub fn add(env: &super::Env<'_>, add: Add, stdin: &str, split: Split) -> Result<Change, Error> {
     if add.kind == Kind::Stmt {

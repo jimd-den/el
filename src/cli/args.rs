@@ -13,7 +13,7 @@ use std::fmt;
 pub const VALUE_FLAGS: &[&str] = &[
     "--in", "--after", "--before", "--at", "--vis", "--sig", "--body", "--doc", "--attr",
     "--preamble", "--root", "--edition", "--body-mode", "--limit", "--module", "--kind",
-    "--rename", "-n",
+    "--rename", "-n", "--takes", "--returns", "--type", "--value",
 ];
 
 /// Flags that stand alone. Anything not here and not in `VALUE_FLAGS` is refused,
