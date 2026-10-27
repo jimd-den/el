@@ -38,6 +38,16 @@ pub fn not_a_crate(root: &str) -> Error {
     }
 }
 
+/// Two ways of saying the same thing, or a flag that belongs to another
+/// kind: a usage error whose message names the rule.
+pub fn usage(message: impl Into<String>) -> Error {
+    Error {
+        code: "usage.conflict",
+        exit: Exit::Usage,
+        message: message.into(),
+    }
+}
+
 pub fn unsupported(command: &'static str, what: &str) -> Error {
     Error {
         code: "usage.unsupported",
@@ -53,7 +63,7 @@ pub fn needs_sig(kind: crate::core::model::kind::Kind) -> Error {
     Error {
         code: "usage.missing_argument",
         exit: Exit::Usage,
-        message: format!("add {} needs --sig (its type is not inferable)", kind.as_str()),
+        message: format!("add {} needs --type (or --sig); its type is not inferable", kind.as_str()),
     }
 }
 

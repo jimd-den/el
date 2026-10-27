@@ -40,6 +40,11 @@ test loop
   add test <name> --in <module> --sig 'fn <name>()' --body -   a #[test] fn
   cargo test fails before the implementation, passes after. el check does not run tests.
 
+plain words
+  add fn greet --takes 'name: &str' --returns String --body -   no signature syntax
+  add const LIMIT --type usize --value 10   the tool cannot invent a type, so say it
+  either --sig or the plain words, not both
+
 universal flags
   --json         one JSON object on stdout
   --quiet        suppress human notes
@@ -64,6 +69,10 @@ universal flags
   --terse        show: one header line
   --opaque       ls: only opaque modules
   --in <module>  which file the element lives in
+  --takes <params> fn/test: parameters, as written
+  --returns <type> fn/test: the return type
+  --type <type>  const/static/type: the type
+  --value <expr> const/static: the value
   --after <id>   insert or reorder after this id
   --before <id>  insert before this id
   --at <n>       insert at a zero-based sibling index

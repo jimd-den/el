@@ -10,6 +10,26 @@ use super::Env;
 use crate::cli::request::{Add, Edit, Globals, Mv};
 use crate::core::history::entry::Op;
 
+/// Whether a return-type note speaks on this report. It speaks when
+/// the gate rejected with a type mismatch, or when the compiler was
+/// skipped (`--fast`). On a checked success it would only fire for
+/// `()`-valued tails, which is noise, so it stays silent there.
+/// (Test bodies are typechecked by the gate too — a test with a
+/// non-`()` tail is E0308-rejected at add time, not silently kept.)
+fn speak_note(report: &Report, fast: bool) -> bool {
+    match &report.error {
+        None => fast,
+        Some(error) if error.code == "gate.rejected" || error.code == "gate.would_reject" => {
+            report
+                .gate
+                .as_ref()
+                .map(|gate| gate.diagnostics.iter().any(|diag| diag.code == "E0308"))
+                .unwrap_or(false)
+        }
+        _ => false,
+    }
+}
+
 mod apply;
 mod batch;
 mod check;
@@ -45,7 +65,13 @@ pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
         Ok(change) => change,
         Err(error) => return Report::fail("add", error),
     };
-    mutate(
+    let note = match &change {
+        crate::core::model::change::Change::AddElement { body, .. } => {
+            change::return_note(&add, body).then_some(change::RETURN_NOTE.to_string())
+        }
+        _ => None,
+    };
+    let mut report = mutate(
         env,
         globals,
         Mutation {
@@ -59,7 +85,11 @@ pub fn add(env: &Env<'_>, globals: &Globals, add: Add, stdin: &str) -> Report {
             strict: globals.strict,
             fast: globals.fast,
         },
-    )
+    );
+    if speak_note(&report, globals.fast) && let Some(note) = note {
+        report.notes.push(note);
+    }
+    report
 }
 
 pub fn edit(env: &Env<'_>, globals: &Globals, edit: Edit, stdin: &str) -> Report {

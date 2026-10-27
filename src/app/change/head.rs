@@ -13,6 +13,7 @@
 // model's `Element::create` owns that, and a second opinion here would drift.
 
 use super::super::error;
+use super::words;
 use super::super::report::Error;
 use crate::cli::request::Add;
 use crate::core::model::kind::Kind;
@@ -49,20 +50,36 @@ pub fn signature(add: &Add) -> Result<String, Error> {
     if add.kind == Kind::Module {
         return Ok(format!("mod {}", stem(&normalize_module(&add.name))));
     }
+    let words = add.takes.is_some()
+        || add.returns.is_some()
+        || add.decl_type.is_some()
+        || add.value.is_some();
+    if add.signature.is_some() && words {
+        return Err(error::usage(
+            "give either --sig or the plain words (--takes, --returns, --type, --value), not both",
+        ));
+    }
     if let Some(signature) = &add.signature {
         return Ok(signature.clone());
     }
-    match add.kind {
-        Kind::Function => Ok(format!("fn {}()", add.name)),
-        Kind::Const | Kind::Static | Kind::TypeAlias => Err(error::needs_sig(add.kind)),
-        _ => Ok(format!("{} {}", add.kind.as_str(), add.name)),
+    for (flag, value) in [
+        ("--takes", &add.takes),
+        ("--returns", &add.returns),
+        ("--type", &add.decl_type),
+        ("--value", &add.value),
+    ] {
+        if matches!(value, Some(text) if text.trim().is_empty()) {
+            return Err(error::usage(format!("{flag} needs a value")));
+        }
     }
+    words::assemble(add)
 }
 
 fn stem(path: &str) -> &str {
     let file = path.rsplit('/').next().unwrap_or(path);
     file.strip_suffix(".rs").unwrap_or(file)
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -75,6 +92,10 @@ mod tests {
             module: None,
             visibility: None,
             signature: signature.map(str::to_string),
+            takes: None,
+            returns: None,
+            decl_type: None,
+            value: None,
             body: None,
             doc: None,
             preamble: None,
@@ -117,5 +138,23 @@ mod tests {
             signature(&add).expect_err("refused").code,
             "usage.missing_argument"
         );
+    }
+
+    #[test]
+    fn a_sig_and_plain_words_together_are_refused() {
+        let mut add = add(Kind::Function, "greet", Some("fn greet()"));
+        add.takes = Some("name: &str".to_string());
+
+        let refused = signature(&add).expect_err("refused");
+        assert_eq!(refused.code, "usage.conflict");
+    }
+
+    #[test]
+    fn an_empty_plain_word_is_refused() {
+        let mut add = add(Kind::Function, "greet", None);
+        add.takes = Some("".to_string());
+
+        let refused = signature(&add).expect_err("refused");
+        assert_eq!(refused.code, "usage.conflict");
     }
 }

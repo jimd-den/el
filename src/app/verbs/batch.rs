@@ -34,7 +34,7 @@ pub fn parse_batch(stdin: &str) -> Result<Vec<Add>, Error> {
 }
 
 fn parse_item(item: &Json, index: usize) -> Result<Add, Error> {
-    const KEYS: &[&str] = &["kind", "name", "in", "vis", "sig", "body"];
+    const KEYS: &[&str] = &["kind", "name", "in", "vis", "sig", "body", "takes", "returns", "type", "value"];
     let Json::Object(fields) = item else {
         return Err(item_error(index, "must be an object"));
     };
@@ -76,6 +76,10 @@ fn parse_item(item: &Json, index: usize) -> Result<Add, Error> {
         module: field("in"),
         visibility,
         signature: field("sig"),
+        takes: field("takes"),
+        returns: field("returns"),
+        decl_type: field("type"),
+        value: field("value"),
         body,
         doc: None,
         preamble,
@@ -114,7 +118,18 @@ pub fn batch(env: &Env<'_>, globals: &Globals, stdin: &str) -> Report {
         }
     }
     let count = changes.len();
-    mutate(
+    let noted: Vec<(Kind, String)> = adds
+        .iter()
+        .zip(changes.iter())
+        .filter_map(|(add, change)| match change {
+            crate::core::model::change::Change::AddElement { body, .. } => {
+                super::super::change::return_note(add, body)
+                    .then_some((add.kind, super::super::change::RETURN_NOTE.to_string()))
+            }
+            _ => None,
+        })
+        .collect();
+    let mut report = mutate(
         env,
         globals,
         Mutation {
@@ -128,7 +143,11 @@ pub fn batch(env: &Env<'_>, globals: &Globals, stdin: &str) -> Report {
             strict: globals.strict,
             fast: globals.fast,
         },
-    )
+    );
+    if super::speak_note(&report, globals.fast) {
+        report.notes.extend(noted.into_iter().map(|(_, note)| note));
+    }
+    report
 }
 
 #[cfg(test)]
