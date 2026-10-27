@@ -80,3 +80,23 @@ fn a_bad_visibility_names_its_item() {
     assert!(error.message.contains("item 0"), "message: {}", error.message);
     assert!(error.message.contains("banana"), "message: {}", error.message);
 }
+
+#[test]
+fn an_unknown_key_is_refused_instead_of_ignored() {
+    let error = parse_batch(
+        "[{\"kind\":\"fn\",\"name\":\"f\",\"doc\":\"hidden\"}]",
+    )
+    .expect_err("must refuse");
+
+    assert!(error.message.contains("doc"), "message: {}", error.message);
+}
+
+#[test]
+fn a_value_that_is_not_a_string_is_refused() {
+    let error = parse_batch(
+        "[{\"kind\":\"fn\",\"name\":\"f\",\"body\":[\"x();\"]}]",
+    )
+    .expect_err("must refuse");
+
+    assert!(error.message.contains("body"), "message: {}", error.message);
+}
