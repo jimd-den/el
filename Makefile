@@ -10,4 +10,8 @@ typecheck:
 	cargo check --all-targets
 dogfood:
 	cargo run -q -- check --root .
+footprint:
+	tools/footprint.sh
+bench-solution:
+	tools/slm-bench.sh --solution
 check: budget test lint typecheck dogfood
