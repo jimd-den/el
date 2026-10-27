@@ -221,9 +221,11 @@ el skill
 el version
 ```
 
-`doctor` reports: crate root, `.el` health, head seq, store size, orphaned objects, lock
-state, interrupted transaction, drift, and the status of each external tool
-(`cargo`, `rust-analyzer`, `curl`) with path and version (`FR-49`).
+`doctor` reports: crate root, store version, head seq, journal and attic size, whether a
+transaction was interrupted, drift between the catalog and the projection (read-only — it
+never re-renders), and how many blobs the store holds. It does not report lock state,
+because it holds the lock while it runs, and it does not yet report external tool paths and
+versions (`FR-49`, M10). Orphaned-object reporting is specified and unbuilt.
 `--repair` rolls back an interrupted transaction. `--rebuild` regenerates the catalog from
 the journal and must reproduce it byte for byte (`FR-34`).
 `--adopt` records a drifted file as an opaque module (`FR-37`).
