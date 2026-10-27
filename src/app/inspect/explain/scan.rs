@@ -28,8 +28,10 @@ pub(super) fn callers(catalog: &Catalog, element: &Element) -> Vec<Caller> {
             .iter()
             .filter(|stmt| stmt.owner == other.id)
             .find(|stmt| mentions_word(&stmt.text, name))
-            .map(|stmt| first_line(&stmt.text))
-            .or_else(|| mentions_word(&other.head, name).then(|| first_line(&other.head)));
+            .map(|stmt| matching_line(&stmt.text, name))
+            .or_else(|| {
+                mentions_word(&other.head, name).then(|| matching_line(&other.head, name))
+            });
         if let Some(text) = hit {
             found.push(Caller {
                 id: other.id,
@@ -84,10 +86,13 @@ fn is_ident(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
-fn first_line(text: &str) -> String {
-    let line = text.lines().next().unwrap_or("").trim();
-    let clipped: String = line.chars().take(100).collect();
-    clipped
+fn matching_line(text: &str, name: &str) -> String {
+    let line = text
+        .lines()
+        .find(|line| mentions_word(line, name))
+        .unwrap_or("")
+        .trim();
+    line.chars().take(100).collect()
 }
 
 #[cfg(test)]
@@ -120,5 +125,17 @@ mod tests {
         assert!(!is_test(&element));
         element.rename("test");
         assert!(is_test(&element));
+    }
+}
+
+#[cfg(test)]
+mod caller_line_tests {
+    use super::*;
+
+    #[test]
+    fn a_caller_line_contains_the_name() {
+        let text = "first();\napply(p);\n";
+
+        assert_eq!(matching_line(text, "apply"), "apply(p);");
     }
 }

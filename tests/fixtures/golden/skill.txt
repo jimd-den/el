@@ -79,6 +79,7 @@ exit codes
 
 json
   one object on stdout; --json puts prose on stderr.
-  keys: el cmd ok error{code,exit,message} seq changed[] gate{} data?
+  keys: el cmd ok error{code,exit,message,hint} seq changed[] gate{} data?
+  gate diagnostics carry first_actionable: exactly one is true.
 
 not built: refs catalog test build fix search doc

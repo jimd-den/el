@@ -26,7 +26,7 @@ pub fn apply(env: &Env<'_>, globals: &Globals, file: Option<&str>, stdin: &str) 
     };
     let lines = match crate::cli::script::parse(&text) {
         Ok(lines) => lines,
-        Err(error) => return Report::fail("apply", line_error(error.line, usage(&error.to_string()))),
+        Err(error) => return Report::fail("apply", line_error(error.line, usage(&error.message))),
     };
     if lines.is_empty() {
         return Report::fail("apply", usage("apply needs at least one change"));

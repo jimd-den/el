@@ -102,13 +102,14 @@ pub(super) fn prepare(env: &Env<'_>, mutation: &Mutation, notes: &mut Vec<String
             },
         )
         .map_err(|violations| {
-            let context = (mutation.changes.len() > 1).then(|| {
+            let context = (mutation.changes.len() > 1 || !mutation.origins.is_empty())
+                .then(|| {
                 let described = describe_change(index, change);
-                match mutation.origins.get(index) {
-                    Some(line) if *line > 0 => format!("apply line {line}: {described}"),
-                    _ => described,
-                }
-            });
+                    match mutation.origins.get(index) {
+                        Some(line) if *line > 0 => format!("apply line {line}: {described}"),
+                        _ => described,
+                    }
+                });
             violation_error(violations, context)
         })?;
         changed.extend(change::describe(change, &before, &outcome.catalog));

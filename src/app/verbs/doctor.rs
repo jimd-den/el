@@ -147,7 +147,7 @@ fn drift(env: &Env<'_>) -> String {
         projection.files.iter().map(|file| file.path.as_str()).collect();
     if let Ok(paths) = env.fs.list("src") {
         for path in paths {
-            if !known.contains(path.as_str()) {
+            if path.ends_with(".rs") && !known.contains(path.as_str()) {
                 return format!("{path} is not in the projection");
             }
         }

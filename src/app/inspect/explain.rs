@@ -20,7 +20,11 @@ use crate::core::text::json::Json;
 pub fn explain(catalog: &Catalog, entries: &[Entry], element: &Element) -> View {
     let signature = rust::declaration(element);
     let preamble = module_preamble(catalog, element);
-    let doc = show::doc_of(catalog, element);
+    let doc = if element.kind == Kind::Module {
+        None
+    } else {
+        show::doc_of(catalog, element)
+    };
     let callers = callers(catalog, element);
     let tests = tests(catalog, element);
     let history: Vec<&Entry> = entries
@@ -98,7 +102,30 @@ fn module_preamble(catalog: &Catalog, element: &Element) -> Option<String> {
         .find(|candidate| {
             candidate.kind == Kind::Module && candidate.module == element.module
         })?;
+    if module.mode == crate::core::model::element::BodyMode::Opaque {
+        let text: String = catalog
+            .children_of(module.id)
+            .iter()
+            .map(|stmt| stmt.text.as_str())
+            .collect();
+        return leading_comments(&text);
+    }
     show::doc_of(catalog, module)
+}
+
+/// The file's leading comment block, capped: an adopted module stores the whole
+/// file, and a page that pasted it would be a file viewer, not an explanation.
+fn leading_comments(text: &str) -> Option<String> {
+    let lines: Vec<&str> = text
+        .lines()
+        .take_while(|line| {
+            let line = line.trim_start();
+            line.starts_with("//") || line.is_empty()
+        })
+        .take(20)
+        .collect();
+    let trimmed = lines.join("\n").trim().to_string();
+    (!trimmed.is_empty()).then_some(trimmed)
 }
 
 pub(super) fn alias(element: &Element) -> String {

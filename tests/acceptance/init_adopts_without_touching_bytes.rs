@@ -107,3 +107,17 @@ fn an_item_cannot_be_added_to_an_adopted_file() {
     assert!(text(&output).contains("opaque"), "{}", text(&output));
     assert_eq!(fs::read_to_string(root.join("src/main.rs")).expect("main"), MAIN);
 }
+
+#[test]
+fn explain_of_an_adopted_module_is_bounded() {
+    let root = crate_at("init-explain");
+    ok(&el(&root, &["init"]), "init");
+    let main = module_id(&root, "main::mod/main");
+
+    let output = el(&root, &["explain", &main]);
+
+    ok(&output, "explain adopted module");
+    let shown = text(&output);
+    assert!(shown.len() < 2000, "explain is unbounded: {} bytes", shown.len());
+    assert!(!shown.contains("fn main"), "the whole file leaked into explain:\n{shown}");
+}

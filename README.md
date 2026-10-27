@@ -25,8 +25,7 @@ insert/edit/reorder, and the split policy work in a real crate, with the lock, i
 recovery, drift detection, a content-addressed store, and a body grammar that supplies
 closing braces and semicolons. The default gate is L1 (`check`, from the `el.policy` that
 `el new` writes); `--fast` drops to L0 (`model`) and `--strict` runs clippy. Specified but
-unbuilt: `apply`, `refs`, `explain`, `catalog`, `skill`, `--help`, `check`, `test`,
-`build`, `fix`, `search`, `doc`. `make check` is green.
+unbuilt: `refs`, `catalog`, `test`, `build`, `fix`, `search`, `doc`. `make check` is green.
 
 ---
 

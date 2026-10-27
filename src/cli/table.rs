@@ -29,7 +29,8 @@ pub fn guide() -> String {
     out.push_str("  0 ok  1 usage  2 violation  3 gate  4 environment  5 conflict\n");
     out.push_str("  6 not found  7 internal\n");
     out.push_str("\njson\n  one object on stdout; --json puts prose on stderr.\n");
-    out.push_str("  keys: el cmd ok error{code,exit,message} seq changed[] gate{} data?\n");
+    out.push_str("  keys: el cmd ok error{code,exit,message,hint} seq changed[] gate{} data?\n");
+    out.push_str("  gate diagnostics carry first_actionable: exactly one is true.\n");
     out.push_str("\nnot built: refs catalog test build fix search doc\n");
     out
 }

@@ -75,3 +75,15 @@ fn an_extra_source_file_is_reported_as_not_in_the_projection() {
     assert!(text.contains("src/extra.rs"), "{text}");
     assert!(text.contains("not in the projection"), "{text}");
 }
+
+#[test]
+fn an_asset_under_src_is_not_drift() {
+    let built = build("doctor-asset");
+    fs::write(built.hello.join("src/data.json"), "{}").expect("asset");
+
+    let output = el(&built.hello, &["doctor"]);
+
+    ok(&output, "doctor");
+    let text = String::from_utf8_lossy(&output.stdout);
+    assert!(text.contains("drift       none"), "{text}");
+}

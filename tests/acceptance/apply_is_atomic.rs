@@ -106,3 +106,28 @@ fn a_script_line_cannot_read_stdin() {
     assert_eq!(output.status.code(), Some(1), "{}", text(&output));
     assert!(text(&output).contains("apply line 1"), "{}", text(&output));
 }
+
+#[test]
+fn a_one_line_script_names_its_line() {
+    let root = fresh("apply-one-line");
+    let hello = root.join("hello");
+    ok(&el(&root, &["new", "hello"]), "new");
+
+    let output = el_stdin(&hello, &["apply"], "add mod src/main.rs\n");
+
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output));
+    assert!(text(&output).contains("apply line 1"), "{}", text(&output));
+}
+
+#[test]
+fn an_unterminated_quote_names_the_line_once() {
+    let root = fresh("apply-unterminated");
+    let hello = root.join("hello");
+    ok(&el(&root, &["new", "hello"]), "new");
+
+    let output = el_stdin(&hello, &["apply"], "add fn one --sig 'fn one(\n");
+
+    assert_eq!(output.status.code(), Some(1), "{}", text(&output));
+    let shown = text(&output);
+    assert!(!shown.contains("apply line 1: apply line 1"), "{shown}");
+}
