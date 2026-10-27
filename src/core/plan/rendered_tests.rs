@@ -96,3 +96,24 @@ fn a_preamble_satisfies_the_preamble_rule() {
 
     assert!(rendered_violations(&catalog, &policy).is_empty());
 }
+
+#[test]
+fn an_opaque_file_is_not_a_function_body_budget() {
+    use crate::core::model::element::BodyMode;
+
+    let mut catalog = fixture::catalog();
+    let id = fixture::module(&mut catalog, "src/main.rs");
+    for text in ["a();\n", "b();\n", "c();\n"] {
+        catalog.add_stmt(id, text).expect("stmt");
+    }
+    catalog.find_mut(id).expect("module").mode = BodyMode::Opaque;
+    let policy = Policy {
+        ceiling: 1000,
+        max_fn_lines: 1,
+        ..fixture::policy()
+    };
+
+    let found = rendered_violations(&catalog, &policy);
+
+    assert!(!found.iter().any(|violation| violation.code == Code::FnBudget), "{found:?}");
+}
