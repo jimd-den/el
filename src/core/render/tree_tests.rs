@@ -102,3 +102,30 @@
 
         assert!(Tree::of(&catalog).get("src/main.rs").expect("root").items.is_empty());
     }
+
+    #[test]
+    fn a_mod_rs_ancestor_keeps_its_own_path() {
+        let mut catalog = Catalog::new();
+        catalog
+            .add_element(&NewElement {
+                kind: Kind::Function,
+                module: "src/a/b.rs",
+                signature: "fn f",
+                visibility: Visibility::Private,
+            })
+            .expect("item");
+        catalog
+            .add_element(&NewElement {
+                kind: Kind::Module,
+                module: "src/a/mod.rs",
+                signature: "mod a",
+                visibility: Visibility::Private,
+            })
+            .expect("module");
+
+        let tree = Tree::of(&catalog);
+        let paths: Vec<&str> = tree.modules().map(|node| node.path.as_str()).collect();
+
+        assert!(paths.contains(&"src/a/mod.rs"), "{paths:?}");
+        assert!(!paths.contains(&"src/a.rs"), "{paths:?}");
+    }

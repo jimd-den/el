@@ -51,7 +51,9 @@ impl Tree {
         for path in mentioned(catalog) {
             for module in ancestors(&module_of(&path)) {
                 if !module.is_empty() {
-                    wanted.insert(file_for(&module));
+                    wanted.insert(
+                        known_file(&module, catalog).unwrap_or_else(|| file_for(&module)),
+                    );
                 }
             }
             wanted.insert(path);
@@ -153,6 +155,17 @@ impl Tree {
     pub fn get(&self, path: &str) -> Option<&Node> {
         self.nodes.get(path)
     }
+}
+
+/// The file a module already lives in, when the catalog has a module element for
+/// it. Cargo accepts `src/a/mod.rs` and `src/a.rs`; the catalog's path wins, so a
+/// grandchild does not invent a second file for a module that exists.
+fn known_file(module: &str, catalog: &Catalog) -> Option<String> {
+    catalog
+        .elements
+        .iter()
+        .find(|element| element.kind == Kind::Module && module_of(&element.module) == module)
+        .map(|element| element.module.clone())
 }
 
 #[path = "tree_paths.rs"]
