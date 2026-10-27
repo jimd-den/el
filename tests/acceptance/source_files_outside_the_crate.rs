@@ -87,3 +87,26 @@ fn a_missing_source_is_reported_once_with_its_path() {
     assert!(text.contains("/tmp/el-no-such-snippet.rs"), "{text}");
     assert!(!text.contains("el: el:"), "{text}");
 }
+
+#[test]
+fn a_body_can_come_from_a_relative_path_that_leaves_the_crate() {
+    let built = build("source-relative");
+    let outside = built.hello.parent().expect("parent").join("snippet.rs");
+    fs::write(&outside, "let n = 2;").expect("snippet");
+
+    let output = el_stdin(
+        &built.hello,
+        &[
+            "add", "fn", "relative", "--in", "src/greet.rs", "--sig", "fn relative()",
+            "--body", "../snippet.rs",
+        ],
+        "",
+    );
+
+    ok(&output, "add with relative --body");
+    assert!(
+        fs::read_to_string(built.hello.join("src/greet.rs"))
+            .expect("greet")
+            .contains("let n = 2;")
+    );
+}

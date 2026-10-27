@@ -86,14 +86,19 @@ impl Fs for Local {
         sync_directory(parent, path)
     }
 
-    /// Absolute paths are the user's, not the store's: `resolve` exists to keep
-    /// the projection inside the crate, and this method only ever reads.
+    /// A path the user named is theirs, not the store's: `resolve` exists to keep
+    /// the projection inside the crate, and this method only ever reads. A
+    /// relative path is joined to the root without the `..` refusal, because
+    /// `../snippet.rs` is how a sibling is named.
     fn read_source(&self, path: &str) -> Result<Option<Vec<u8>>, Error> {
+        if path.is_empty() {
+            return Err(Error::new(path, Kind::NotAFile));
+        }
         let target = Path::new(path);
         let target = if target.is_absolute() {
             target.to_path_buf()
         } else {
-            self.resolve(path)?
+            self.root.join(target)
         };
         match fs::read(&target) {
             Ok(bytes) => Ok(Some(bytes)),
