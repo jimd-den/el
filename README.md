@@ -19,7 +19,7 @@ head 3 -> 2
 That is the actual transcript, not a target: the id is the one the tool printed, and
 the second line says what it wrote.
 
-**Design status: M8.** `el new`, `add`, `batch`, `edit`, `rm`, `mv`, `run`, `log`, `diff`,
+**Design status: M12.** `el new`, `add`, `batch`, `edit`, `rm`, `mv`, `run`, `log`, `diff`,
 `undo`, `redo`, `revert`, `doctor`, `ls`, `tree`, `show`, `find`, statement
 insert/edit/reorder, and the split policy work in a real crate, with the lock, inflight
 recovery, drift detection, a content-addressed store, and a body grammar that supplies

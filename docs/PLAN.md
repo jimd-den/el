@@ -25,8 +25,11 @@ toolkit and renderer are property-tested, `plan` refuses with nothing written, t
 verifies every read, and UC-1 builds and runs a five-command crate through the real binary.
 M7 is real: the read surface, statement insert/edit/rm/reorder, anchors, the split
 policy, and comment attachment. M8 is real: history verbs, the attic, per-sequence
-catalog snapshots, diff, and doctor recovery. M9–M12 do not exist: their sections are
-designs, not claims.
+catalog snapshots, diff, and doctor recovery. M9 is real on the gate branch: the
+compiler delta refuses a change that adds an error. M12 is real on this branch:
+`apply`, `skill`, `explain`, `check`, `init`, the refusal hint and the first
+actionable diagnostic. M10 and M11 are still designs, not claims. M13 is the
+release harness: footprint and the SLM benchmark.
 
 The M6 handoff branch was intentionally red for one turn: two files were over the line
 ceiling and three parser tests failed. That is now corrected — `cli::args` and
@@ -614,7 +617,34 @@ plan-failure cases there.
 | footprint | `tools/footprint.sh` reports a stripped binary ≤ 1.5 MB |
 
 **Done when.** `make check` green with `el` checking `el`, and `docs/reports/m12-dogfood.md`
-records the first session where `el` edits its own source.
+records the first session where `el` edits its own source. Evidence: `el init` adopted 171
+files, `el check` reported zero diagnostics, and `el edit el-0325` rewrote
+`src/core/text/tsv.rs` through the gate. The report lists the three defects the session found.
+
+---
+
+### M13 — Release: the footprint and the measured loop
+
+**Goal.** The two claims M12 leaves open are measurable: the binary is small enough to
+install, and an agent can be run against the tool without hand-holding.
+
+**RED first.** `tests/meta_slm_harness.rs`: exactly ten tasks, each with a non-empty prompt, a
+check script and a solution script, and a runner that names its model.
+
+**Deliverables.**
+
+- `tools/footprint.sh` — a stripped release binary, `FOOTPRINT_LIMIT` default 1 500 000 bytes.
+- `tests/bench/slm/` — ten tasks over one fixture crate; each task has a prompt, a check and a
+  solution. `tools/slm-bench.sh --solution` validates the harness without a model; a real run
+  names the model and records its result.
+- `docs/reports/m13-slm-bench.md` — the harness, the method, and what is deliberately not
+  claimed until a model is run.
+
+**Done when.** `tools/footprint.sh` exits 0 (measured 1 184 664 bytes on 2026-10-27), all ten
+solutions pass their checks, and the meta test is green. A benchmark *result* is not claimed:
+the harness is the deliverable, the model run is the next step. Evidence:
+`docs/reports/m13-slm-bench.md`; the self-test is `tools/slm-bench.sh --solution`.
+
 
 ---
 
