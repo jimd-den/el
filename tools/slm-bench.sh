@@ -37,10 +37,23 @@ if [ "$mode" = run ] && { [ -z "${EL_AGENT:-}" ] || [ "$model" = not-named ]; };
     exit 2
 fi
 
-if [ ! -x "$el_bin" ]; then
+if [ -z "${EL_BIN:-}" ]; then
     (cd "$root" && cargo build --quiet)
+    target_dir=$(cd "$root" && cargo metadata --format-version 1 --no-deps \
+        | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')
+    el_bin=${target_dir:-$root/target}/debug/el
+fi
+if [ ! -x "$el_bin" ]; then
+    printf 'el binary is not executable: %s\n' "$el_bin" >&2
+    exit 2
 fi
 el_bin=$(cd "$(dirname "$el_bin")" && pwd)/$(basename "$el_bin")
+for want in "${tasks[@]}"; do
+    if ! awk -F'\t' -v id="$want" '$1 == id { found = 1 } END { exit !found }' "$bench/tasks.tsv"; then
+        printf 'unknown task: %s\n' "$want" >&2
+        exit 2
+    fi
+done
 
 work="$root/target/slm"
 report="$work/report.tsv"
@@ -56,10 +69,12 @@ selected() {
 }
 
 failed=0
+ran=0
 while IFS=$'\t' read -r id description; do
     [ -n "$id" ] || continue
     selected "$id" || continue
     case "$id" in \#*) continue ;; esac
+    ran=$((ran + 1))
     task_dir="$bench/tasks/$id"
     dir="$work/$id"
     mkdir -p "$dir"
@@ -104,4 +119,8 @@ done < "$bench/tasks.tsv"
 
 printf '\nreport: %s\n' "$report"
 cat "$report"
+if [ "$ran" -eq 0 ]; then
+    printf 'no task ran\n' >&2
+    exit 2
+fi
 [ "$failed" -eq 0 ]

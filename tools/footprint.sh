@@ -6,8 +6,11 @@ limit=${FOOTPRINT_LIMIT:-1500000}
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 cargo build --release --quiet
+target_dir=$(cargo metadata --format-version 1 --no-deps \
+    | sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p')
+target_dir=${target_dir:-$root/target}
 staged=$(mktemp)
-cp target/release/el "$staged"
+cp "$target_dir/release/el" "$staged"
 strip "$staged"
 bytes=$(stat -c %s "$staged")
 rm -f "$staged"

@@ -56,3 +56,20 @@ fn the_runner_and_the_base_crate_exist() {
     let base = fs::read_to_string(bench().join("base.sh")).expect("base.sh");
     assert!(base.contains("el new"), "base.sh must build the fixture with el");
 }
+
+#[test]
+fn an_unknown_task_id_fails_instead_of_producing_an_empty_report() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let output = std::process::Command::new(root.join("tools/slm-bench.sh"))
+        .args(["--solution", "--task", "no-such-task"])
+        .current_dir(root)
+        .output()
+        .expect("run slm-bench");
+
+    assert!(!output.status.success(), "a typo must not exit 0");
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("no-such-task")
+            || String::from_utf8_lossy(&output.stdout).contains("no-such-task"),
+        "the refusal names the task"
+    );
+}
