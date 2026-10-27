@@ -19,6 +19,7 @@ mod mod_tree_is_generated;
 mod policy_ceiling_blocks_growth;
 mod edit_replaces_one_statement_only;
 mod render_matches_golden;
+mod source_files_outside_the_crate;
 mod split_policy_is_honoured;
 mod real_program_builds_with_blocks_and_modules;
 mod one_compact_listing_names_the_statement_to_edit;

@@ -98,7 +98,7 @@ fn read_source(env: &Env<'_>, source: &Source, stdin: &str) -> Result<String, Er
         Source::File(path) => {
             let bytes = env
                 .fs
-                .read(path)
+                .read_source(path)
                 .map_err(error::filesystem)?
                 .ok_or_else(|| Error {
                     code: "env.io",

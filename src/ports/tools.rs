@@ -53,11 +53,12 @@ impl Error {
 }
 
 impl fmt::Display for Error {
+    /// A message fragment, not a line: the edge adds the `el: ` prefix once.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.missing {
-            write!(f, "el: {} is not installed ({}); install it or use --fast", self.program, self.detail)
+            write!(f, "{} is not installed ({}); install it or use --fast", self.program, self.detail)
         } else {
-            write!(f, "el: could not run {}: {}", self.program, self.detail)
+            write!(f, "could not run {}: {}", self.program, self.detail)
         }
     }
 }

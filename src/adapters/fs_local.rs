@@ -86,6 +86,22 @@ impl Fs for Local {
         sync_directory(parent, path)
     }
 
+    /// Absolute paths are the user's, not the store's: `resolve` exists to keep
+    /// the projection inside the crate, and this method only ever reads.
+    fn read_source(&self, path: &str) -> Result<Option<Vec<u8>>, Error> {
+        let target = Path::new(path);
+        let target = if target.is_absolute() {
+            target.to_path_buf()
+        } else {
+            self.resolve(path)?
+        };
+        match fs::read(&target) {
+            Ok(bytes) => Ok(Some(bytes)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(Error::new(path, Kind::from_io(error.kind()))),
+        }
+    }
+
     fn remove(&self, path: &str) -> Result<(), Error> {
         match fs::remove_file(self.resolve(path)?) {
             Ok(()) => Ok(()),
