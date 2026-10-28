@@ -9,7 +9,7 @@
 use super::error;
 use super::report::Error;
 use crate::cli::request::{Add, Edit, Mv};
-use crate::core::model::change::{Anchor, Change};
+use crate::core::model::change::Change;
 use crate::core::model::element::Visibility;
 use crate::core::model::id::ElId;
 use crate::core::model::kind::Kind;
@@ -19,6 +19,7 @@ mod body;
 mod head;
 mod words;
 mod describe;
+mod statement;
 
 #[cfg(test)]
 #[path = "change_tests.rs"]
@@ -29,7 +30,7 @@ pub(crate) use words::{return_note, RETURN_NOTE};
 
 pub fn add(env: &super::Env<'_>, add: Add, stdin: &str, split: Split) -> Result<Change, Error> {
     if add.kind == Kind::Stmt {
-        return add_statement(env, &add, stdin);
+        return statement::add_statement(env, &add, stdin);
     }
     if add.after.is_some() || add.before.is_some() || add.at.is_some() {
         return Err(error::unsupported("add", "an anchor on a non-statement"));
@@ -154,29 +155,6 @@ pub fn move_(mov: Mv) -> Result<Change, Error> {
         id: parse_id(&mov.subject)?,
         module,
     })
-}
-
-fn add_statement(env: &super::Env<'_>, add: &Add, stdin: &str) -> Result<Change, Error> {
-    let owner = parse_id(&add.name)?;
-    let source = add.body.as_ref().ok_or_else(|| Error {
-        code: "usage.missing_argument",
-        exit: super::Exit::Usage,
-        message: "add stmt needs --body".to_string(),
-    })?;
-    let body = body::body(env, Some(source), stdin, true)?;
-    let anchor = match (&add.after, &add.before, add.at) {
-        (Some(after), None, None) => Anchor::After(parse_id(after)?),
-        (None, Some(before), None) => Anchor::Before(parse_id(before)?),
-        (None, None, Some(at)) => Anchor::At(at),
-        (None, None, None) => Anchor::End,
-        _ => {
-            return Err(error::unsupported(
-                "add stmt",
-                "more than one of --after, --before, --at",
-            ));
-        }
-    };
-    Ok(Change::AddStmt { owner, body, anchor })
 }
 
 pub fn parse_id(text: &str) -> Result<ElId, Error> {

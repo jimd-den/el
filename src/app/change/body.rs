@@ -103,7 +103,9 @@ fn read_source(env: &Env<'_>, source: &Source, stdin: &str) -> Result<String, Er
                 .ok_or_else(|| Error {
                     code: "env.io",
                     exit: super::super::Exit::Env,
-                    message: format!("{path} does not exist"),
+                    message: format!(
+                        "no file {path}; give a file path whose contents are read, or `-` for stdin"
+                    ),
                 })?;
             String::from_utf8(bytes).map_err(|_| error::corrupt(format!("{path} is not UTF-8")))
         }

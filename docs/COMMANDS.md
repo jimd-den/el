@@ -232,6 +232,11 @@ el revert <seq> [--json]
 (`FR-28`). `--attic` includes truncated future entries (`FR-30`). `diff` with no arguments
 compares head with its parent.
 
+`undo` appends one entry per sequence stepped back (op `undo`, gate `model`); `redo`
+appends an entry reversing the latest un-redone undo in the trailing undo/redo run.
+A new mutation after undos ends redo, but the undone entries stay journaled and
+revertible — undo no longer orphans a future to the attic (ADR-0032).
+
 ### 4.6 Outside world
 
 ```text

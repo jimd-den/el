@@ -48,3 +48,6 @@ mod test_without_a_body_is_red_by_default;
 mod plain_words_assemble_signatures;
 mod return_type_note_is_spoken;
 mod plain_words_red_loop;
+mod journaled_undo;
+mod stmt_subject_wording;
+mod body_path_wording;

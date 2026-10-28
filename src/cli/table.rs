@@ -33,6 +33,8 @@ pub fn guide() -> String {
     out.push_str("  add fn greet --takes 'name: &str' --returns String --body -   no signature syntax\n");
     out.push_str("  add const LIMIT --type usize --value 10   the tool cannot invent a type, so say it\n");
     out.push_str("  either --sig or the plain words, not both\n");
+    out.push_str("\nstatements\n");
+    out.push_str("  add stmt <fn-id> --body - --at 0   the subject is the owning function; a statement has no name\n");
     out.push_str("\nuniversal flags\n");
     for (flag, what) in FLAG_LINES {
         let _ = writeln!(out, "  {flag:<14} {what}");
@@ -78,8 +80,8 @@ const VERB_LINES: &[(&str, &str, &str)] = &[
     ("explain", "explain <id>", "preamble, doc, callers, tests, history"),
     ("log", "log [-n <count>] [--attic]", "the journal"),
     ("diff", "diff [<a>] [<b>]", "elements and files between sequences"),
-    ("undo", "undo [<n>]", "move head back"),
-    ("redo", "redo", "move head forward"),
+    ("undo", "undo [<n>]", "append an entry restoring an earlier state"),
+    ("redo", "redo", "append an entry restoring an undone state"),
     ("revert", "revert <seq>", "append an inverse change"),
     ("doctor", "doctor [--repair|--rebuild]", "crate health, recovery"),
     ("check", "check [--fast|--strict]", "the compiler's report, no refusal"),

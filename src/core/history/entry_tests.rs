@@ -124,7 +124,7 @@ fn every_operation_has_a_token_and_the_token_parses_back() {
         assert_eq!(Op::parse(op.as_str()), Some(op), "{}", op.as_str());
         assert!(!op.as_str().contains('\t'));
     }
-    assert_eq!(Op::ALL.len(), 12);
+    assert_eq!(Op::ALL.len(), 14);
     assert_eq!(Op::parse("ADD"), None, "a token is exact");
     assert_eq!(Op::parse(""), None);
 }
