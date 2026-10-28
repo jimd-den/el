@@ -1,55 +1,13 @@
-// Undo, redo and revert. They are head moves plus a full tree materialize, not
-// reverse diffs: that is why they cannot half-apply (FR-29). Revert is the only
-// one that appends; undo and redo only move `head` and restore the catalog
-// snapshot that belongs to the sequence.
+// Revert appends an inverse change: a head move plus a full tree
+// materialize, not a reverse diff, so it cannot half-apply (FR-29).
+// Undo and redo live in history_moves: since ADR-0032 they append
+// entries too, instead of silently moving head. The helpers below
+// serve both modules.
 
 use super::super::{error, load, projection, transaction, Env, Exit, Report};
 use crate::core::history::entry::{Entry, Op};
 use crate::core::history::object;
 use crate::core::history::tree::Tree;
-
-pub fn undo(env: &Env<'_>, n: Option<usize>) -> Report {
-    let n = n.unwrap_or(1) as u64;
-    let (head, _) = match state(env, "undo") {
-        Ok(state) => state,
-        Err(error) => return Report::fail("undo", error),
-    };
-    if n == 0 {
-        return done("undo", head, "nothing to undo");
-    }
-    let Some(target) = head.checked_sub(n).filter(|seq| *seq > 0) else {
-        return Report::fail("undo", missing("there is no sequence that far back"));
-    };
-    match restore(env, target) {
-        Ok(entry) => {
-            let mut report = done("undo", target, &format!("head {head} -> {target}"));
-            report.payload = Some(super::read::entry_payload(&entry));
-            report
-        }
-        Err(error) => Report::fail("undo", error),
-    }
-}
-
-pub fn redo(env: &Env<'_>) -> Report {
-    let (head, _) = match state(env, "redo") {
-        Ok(state) => state,
-        Err(error) => return Report::fail("redo", error),
-    };
-    let target = head + 1;
-    let entry = match env.journal.entry(target).map_err(error::store) {
-        Ok(Some(entry)) => entry,
-        Ok(None) => return Report::fail("redo", missing("nothing to redo")),
-        Err(error) => return Report::fail("redo", error),
-    };
-    match restore_entry(env, &entry) {
-        Ok(()) => {
-            let mut report = done("redo", target, &format!("head {head} -> {target}"));
-            report.payload = Some(super::read::entry_payload(&entry));
-            report
-        }
-        Err(error) => Report::fail("redo", error),
-    }
-}
 
 pub fn revert(env: &Env<'_>, seq: u64) -> Report {
     let target = match entry_at(env, seq) {
@@ -113,7 +71,7 @@ pub fn revert(env: &Env<'_>, seq: u64) -> Report {
     report
 }
 
-fn state(env: &Env<'_>, cmd: &'static str) -> Result<(u64, Tree), error::Error> {
+pub(crate) fn state(env: &Env<'_>, cmd: &'static str) -> Result<(u64, Tree), error::Error> {
     load::ensure_crate(env)?;
     let notes = transaction::recover(env)?;
     let _ = notes;
@@ -127,7 +85,7 @@ fn state(env: &Env<'_>, cmd: &'static str) -> Result<(u64, Tree), error::Error> 
     Ok((head, tree))
 }
 
-fn entry_at(env: &Env<'_>, seq: u64) -> Result<Option<Entry>, error::Error> {
+pub(crate) fn entry_at(env: &Env<'_>, seq: u64) -> Result<Option<Entry>, error::Error> {
     if let Some(entry) = env.journal.entry(seq).map_err(error::store)? {
         return Ok(Some(entry));
     }
@@ -139,21 +97,14 @@ fn entry_at(env: &Env<'_>, seq: u64) -> Result<Option<Entry>, error::Error> {
         .find(|entry| entry.seq == seq))
 }
 
-fn restore(env: &Env<'_>, seq: u64) -> Result<Entry, error::Error> {
-    let entry = entry_at(env, seq)?
-        .ok_or_else(|| missing(&format!("sequence {seq} does not exist")))?;
-    restore_entry(env, &entry)?;
-    Ok(entry)
-}
-
-fn restore_entry(env: &Env<'_>, entry: &Entry) -> Result<(), error::Error> {
+pub(crate) fn restore_entry(env: &Env<'_>, entry: &Entry) -> Result<(), error::Error> {
     let tree = env.journal.get_tree(&entry.to).map_err(error::store)?;
     projection::restore(env, &tree)?;
     env.journal.set_head(entry.seq).map_err(error::store)?;
     set_catalog_at(env, entry.seq)
 }
 
-fn set_catalog_at(env: &Env<'_>, seq: u64) -> Result<(), error::Error> {
+pub(crate) fn set_catalog_at(env: &Env<'_>, seq: u64) -> Result<(), error::Error> {
     let text = env
         .journal
         .catalog_at(seq)
@@ -162,7 +113,7 @@ fn set_catalog_at(env: &Env<'_>, seq: u64) -> Result<(), error::Error> {
     env.journal.set_catalog(&text).map_err(error::store)
 }
 
-fn done(cmd: &'static str, seq: u64, line: &str) -> Report {
+pub(crate) fn done(cmd: &'static str, seq: u64, line: &str) -> Report {
     let mut report = Report::new(cmd);
     report.seq = Some(seq);
     report.lines.push(line.to_string());
@@ -175,7 +126,7 @@ fn abort(env: &Env<'_>, old_tree: &Tree, cmd: &'static str, cause: error::Error)
     Report::fail(cmd, cause)
 }
 
-fn missing(message: &str) -> error::Error {
+pub(crate) fn missing(message: &str) -> error::Error {
     error::Error {
         code: "notfound.sequence",
         exit: Exit::NotFound,

@@ -21,8 +21,8 @@ read
   log      log [-n <count>] [--attic]                 the journal
   diff     diff [<a>] [<b>]                           elements and files between sequences
 history
-  undo     undo [<n>]                                 move head back
-  redo     redo                                       move head forward
+  undo     undo [<n>]                                 append an entry restoring an earlier state
+  redo     redo                                       append an entry restoring an undone state
   revert   revert <seq>                               append an inverse change
 verify
   run      run [-- args…]                             cargo run, streams output
@@ -44,6 +44,9 @@ plain words
   add fn greet --takes 'name: &str' --returns String --body -   no signature syntax
   add const LIMIT --type usize --value 10   the tool cannot invent a type, so say it
   either --sig or the plain words, not both
+
+statements
+  add stmt <fn-id> --body - --at 0   the subject is the owning function; a statement has no name
 
 universal flags
   --json         one JSON object on stdout

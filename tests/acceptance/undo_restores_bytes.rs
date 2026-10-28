@@ -1,8 +1,9 @@
-// UC-3 / FR-29: undo is a head move plus a full materialize, including deletions.
-// The test captures every owned file at a known sequence, makes four changes (one
-// of which deletes a file), undoes four, and compares bytes.
+// UC-3 / FR-29: undo is a full materialize, including deletions.
+// ADR-0032: undo appends one entry per step back, so head after
+// undo 4 is tip + 4, not the restored sequence. The bytes
+// assertions are unchanged; only the head arithmetic moved.
 
-use crate::program::{self, el, el_stdin, files, ok};
+use crate::program::{self, el, el_stdin, files, log_json, ok};
 
 #[test]
 fn undo_restores_every_owned_byte_and_the_deleted_file() {
@@ -23,6 +24,11 @@ fn undo_restores_every_owned_byte_and_the_deleted_file() {
     ok(&el(&built.hello, &["rm", &module]), "rm mod");
     assert!(!built.hello.join("src/tmp.rs").exists(), "the deletion is real");
 
+    let tip = log_json(&built.hello, false)[0]
+        .get("seq")
+        .and_then(|v| v.as_number())
+        .expect("tip");
+
     let undo = el(&built.hello, &["undo", "4"]);
     ok(&undo, "undo 4");
 
@@ -32,7 +38,7 @@ fn undo_restores_every_owned_byte_and_the_deleted_file() {
         .trim()
         .parse()
         .expect("number");
-    assert_eq!(head, 5);
+    assert_eq!(head, tip + 4);
 }
 
 #[test]

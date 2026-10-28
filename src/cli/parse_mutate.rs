@@ -26,11 +26,16 @@ pub(super) fn add(args: &Args) -> Result<Add, Usage> {
                 ),
             )
         })?;
-    let name = args
-        .words
-        .get(2)
-        .cloned()
-        .ok_or_else(|| Usage::new("usage.missing_argument", format!("add {kind} needs a name")))?;
+    let name = args.words.get(2).cloned().ok_or_else(|| {
+        Usage::new(
+            "usage.missing_argument",
+            if kind.as_str() == "stmt" {
+                "add stmt needs the owning function".to_string()
+            } else {
+                format!("add {kind} needs a name")
+            },
+        )
+    })?;
 
     Ok(Add {
         kind,

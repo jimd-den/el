@@ -31,10 +31,12 @@ pub enum Op {
     Revert,
     Repair,
     Apply,
+    Undo,
+    Redo,
 }
 
 impl Op {
-    pub const ALL: [Op; 12] = [
+    pub const ALL: [Op; 14] = [
         Op::Init,
         Op::Add,
         Op::Edit,
@@ -47,6 +49,8 @@ impl Op {
         Op::Revert,
         Op::Repair,
         Op::Apply,
+        Op::Undo,
+        Op::Redo,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -63,6 +67,8 @@ impl Op {
             Op::Revert => "revert",
             Op::Repair => "repair",
             Op::Apply => "apply",
+            Op::Undo => "undo",
+            Op::Redo => "redo",
         }
     }
 

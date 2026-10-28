@@ -36,6 +36,7 @@ mod check;
 mod diff;
 mod doctor;
 mod history;
+mod history_moves;
 mod inspect;
 mod read;
 
@@ -44,7 +45,8 @@ pub use batch::batch;
 pub use check::check;
 pub use diff::diff;
 pub use doctor::doctor;
-pub use history::{redo, revert, undo};
+pub use history::revert;
+pub use history_moves::{redo, undo};
 pub use inspect::{explain, find, ls, show, tree};
 pub use read::{log, run, version};
 
