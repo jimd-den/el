@@ -39,6 +39,8 @@ kinds
 test loop
   add test <name> --in <module> --sig 'fn <name>()' --body -   a #[test] fn
   cargo test fails before the implementation, passes after. el check does not run tests.
+  echo 'assert_eq!(answer(), 42);' | el add test answer_returns_42 --in util --body -
+  the body is assertions only: no #[test] line, no mod tests wrapper, no --sig needed
 
 plain words
   add fn greet --takes 'name: &str' --returns String --body -   no signature syntax
@@ -47,6 +49,12 @@ plain words
 
 statements
   add stmt <fn-id> --body - --at 0   the subject is the owning function; a statement has no name
+
+apply example
+  echo '1' > /tmp/one.txt
+  printf 'add mod extra --in src\nadd fn one --in src/extra --vis pub --returns u32 --body /tmp/one.txt\n' > /tmp/changes.el
+  el apply /tmp/changes.el
+  in a script, --body takes a file, never a literal and never -; scripts cannot read stdin
 
 universal flags
   --json         one JSON object on stdout
