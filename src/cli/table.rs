@@ -29,12 +29,19 @@ pub fn guide() -> String {
     out.push_str("\ntest loop\n");
     out.push_str("  add test <name> --in <module> --sig 'fn <name>()' --body -   a #[test] fn\n");
     out.push_str("  cargo test fails before the implementation, passes after. el check does not run tests.\n");
+    out.push_str("  echo 'assert_eq!(answer(), 42);' | el add test answer_returns_42 --in util --body -\n");
+    out.push_str("  the body is assertions only: no #[test] line, no mod tests wrapper, no --sig needed\n");
     out.push_str("\nplain words\n");
     out.push_str("  add fn greet --takes 'name: &str' --returns String --body -   no signature syntax\n");
     out.push_str("  add const LIMIT --type usize --value 10   the tool cannot invent a type, so say it\n");
     out.push_str("  either --sig or the plain words, not both\n");
     out.push_str("\nstatements\n");
     out.push_str("  add stmt <fn-id> --body - --at 0   the subject is the owning function; a statement has no name\n");
+    out.push_str("\napply example\n");
+    out.push_str("  echo '1' > /tmp/one.txt\n");
+    out.push_str("  printf 'add mod extra --in src\\nadd fn one --in src/extra --vis pub --returns u32 --body /tmp/one.txt\\n' > /tmp/changes.el\n");
+    out.push_str("  el apply /tmp/changes.el\n");
+    out.push_str("  in a script, --body takes a file, never a literal and never -; scripts cannot read stdin\n");
     out.push_str("\nuniversal flags\n");
     for (flag, what) in FLAG_LINES {
         let _ = writeln!(out, "  {flag:<14} {what}");
