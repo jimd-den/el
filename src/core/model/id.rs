@@ -22,7 +22,7 @@ impl ElId {
     /// Parse the printed form; `None` for anything that is not `el-NNNN`.
     pub fn parse(text: &str) -> Option<Self> {
         let digits = text.strip_prefix("el-")?;
-        if digits.len() != 4 || !digits.chars().all(|c| c.is_ascii_digit()) {
+        if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_digit()) {
             return None;
         }
         Some(Self(digits.parse().ok()?))
@@ -88,9 +88,19 @@ mod tests {
 
     #[test]
     fn a_malformed_id_is_refused() {
-        assert_eq!(ElId::parse("el-11"), None);
+        assert_eq!(ElId::parse("el-"), None);
         assert_eq!(ElId::parse("el-001x"), None);
         assert_eq!(ElId::parse("00011"), None);
+    }
+
+    #[test]
+    fn an_id_round_trips_at_9999_and_10000() {
+        for n in [9999u32, 10000] {
+            let id = ElId(n);
+            assert_eq!(ElId::parse(&id.to_string()), Some(id));
+        }
+        assert_eq!(ElId(10000).to_string(), "el-10000");
+        assert_eq!(ElId::parse("el-10000"), Some(ElId(10000)));
     }
 
     #[test]

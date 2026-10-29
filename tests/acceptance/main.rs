@@ -38,6 +38,8 @@ mod skill_is_the_whole_surface;
 mod a_refusal_names_a_next_command;
 mod one_diagnostic_is_first_actionable;
 mod apply_is_atomic;
+mod apply_reports_physical_lines;
+mod test_executes_selected_test;
 mod explain_names_what_uses_it;
 mod check_reports_without_a_catalog;
 mod init_adopts_without_touching_bytes;

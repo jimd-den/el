@@ -5,7 +5,7 @@
 use super::*;
 
 fn words(line: &str) -> Vec<String> {
-    parse(line).expect("parse").remove(0)
+    parse(line).expect("parse").remove(0).1
 }
 
 #[test]
@@ -37,7 +37,14 @@ fn blank_and_comment_lines_are_skipped() {
     let lines = parse("\n# a note\n\nrm el-0001\n").expect("parse");
 
     assert_eq!(lines.len(), 1);
-    assert_eq!(lines[0], ["rm", "el-0001"]);
+    assert_eq!(lines[0].1, ["rm", "el-0001"]);
+}
+
+#[test]
+fn a_kept_line_carries_its_physical_number() {
+    let lines = parse("\n# a note\n\nrm el-0001\n").expect("parse");
+
+    assert_eq!(lines[0].0, 4);
 }
 
 #[test]

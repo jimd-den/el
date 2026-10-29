@@ -11,13 +11,13 @@ use crate::core::model::id::ElId;
 
 pub(super) fn build(
     env: &Env<'_>,
-    lines: &[Vec<String>],
+    lines: &[(usize, Vec<String>)],
     catalog: &Catalog,
     split: crate::core::plan::policy::Split,
 ) -> Result<Vec<(usize, crate::core::model::change::Change)>, Error> {
     let mut changes = Vec::new();
-    for (index, argv) in lines.iter().enumerate() {
-        let number = index + 1;
+    for (number, argv) in lines.iter() {
+        let number = *number;
         let parsed = crate::cli::parse(argv).map_err(|usage| {
             line_error(number, usage_error(usage.code, usage.message))
         })?;

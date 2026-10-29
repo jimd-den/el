@@ -47,7 +47,7 @@ fn the_page_groups_verbs_by_task() {
         ("write", &["new", "init", "add", "batch", "apply", "edit", "rm", "mv"]),
         ("read", &["ls", "tree", "show", "find", "explain", "diff", "log"]),
         ("history", &["undo", "redo", "revert"]),
-        ("verify", &["run", "check", "doctor"]),
+        ("verify", &["run", "check", "test", "doctor"]),
         ("meta", &["version", "skill", "help"]),
     ];
     for (index, (group, verbs)) in groups.iter().enumerate() {
