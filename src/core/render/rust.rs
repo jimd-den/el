@@ -129,9 +129,21 @@ fn render_item(
     }
 
     if element.kind.takes_block() {
-        out.line_at(0, &format!("{declaration} {{"));
-        body::render(catalog, node, element, out, spans);
-        out.line_at(0, "}");
+        // An empty body renders on one line, as rustfmt does: probe the
+        // body into scratch output first, so every block-taking kind is
+        // judged by what it actually renders, not by its kind. A body
+        // holding only a comment still renders lines, so it stays
+        // multi-line, exactly as rustfmt keeps it.
+        let mut probe_out = Out::new();
+        let mut probe_spans = Collector::new();
+        body::render(catalog, node, element, &mut probe_out, &mut probe_spans);
+        if probe_out.line() == 1 {
+            out.line_at(0, &format!("{declaration} {{}}"));
+        } else {
+            out.line_at(0, &format!("{declaration} {{"));
+            body::render(catalog, node, element, out, spans);
+            out.line_at(0, "}");
+        }
     } else {
         out.line_at(0, &format!("{declaration};"));
     }
