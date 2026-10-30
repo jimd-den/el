@@ -102,8 +102,10 @@ fn fn_budgets(
             continue;
         };
         // The declaration line and the closing brace are the item's, not the
-        // body's, so the body is what is left between them.
-        let body = (span.last - span.first + 1) as usize - 2;
+        // body's, so the body is what is left between them. A one-line
+        // empty block has neither a separate declaration nor a closing
+        // line, so its body is zero, not a subtraction underflow.
+        let body = (span.last - span.first).saturating_sub(1) as usize;
         if body > policy.max_fn_lines {
             let remedy = match extractable_statements(catalog, projection, element.id) {
                 Some(ids) => format!(

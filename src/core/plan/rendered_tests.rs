@@ -117,3 +117,14 @@ fn an_opaque_file_is_not_a_function_body_budget() {
 
     assert!(!found.iter().any(|violation| violation.code == Code::FnBudget), "{found:?}");
 }
+
+#[test]
+fn an_empty_function_costs_no_function_budget() {
+    let mut catalog = fixture::catalog();
+    fixture::function(&mut catalog, "src/a.rs", "fn run()");
+    let policy = fixture::policy();
+
+    let found = rendered_violations(&catalog, &policy);
+
+    assert!(!found.iter().any(|violation| violation.code == Code::FnBudget), "{found:?}");
+}

@@ -60,6 +60,41 @@ fn an_impl_declares_without_a_name() {
 }
 
 #[test]
+fn an_empty_block_renders_on_one_line() {
+    let mut catalog = Catalog::new();
+    catalog
+        .add_element(&NewElement {
+            kind: Kind::Module,
+            module: "src/main.rs",
+            signature: "mod main",
+            visibility: Visibility::Private,
+        })
+        .expect("module");
+    let id = catalog
+        .add_element(&NewElement {
+            kind: Kind::Function,
+            module: "src/main.rs",
+            signature: "fn main()",
+            visibility: Visibility::Private,
+        })
+        .expect("fn");
+    let element = catalog.find(id).expect("found").clone();
+    let node = Node {
+        path: "src/main.rs".to_string(),
+        module: String::new(),
+        children: Vec::new(),
+        items: Vec::new(),
+        visibility: Visibility::Private,
+    };
+    let mut out = Out::new();
+    let mut spans = Collector::new();
+
+    render_item(&catalog, &node, &element, &mut out, &mut spans);
+
+    assert_eq!(out.into_text(), "fn main() {}\n");
+}
+
+#[test]
 fn an_opaque_module_renders_its_file_byte_for_byte() {
     use crate::core::model::element::{BodyMode, NewElement};
     use crate::core::model::kind::Kind;
