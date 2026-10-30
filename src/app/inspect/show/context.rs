@@ -7,7 +7,6 @@ use crate::core::history::entry::{Entry, Op};
 use crate::core::model::catalog::Catalog;
 use crate::core::model::element::Element;
 use crate::core::model::kind::Kind;
-use crate::core::render::Projection;
 
 pub(crate) fn doc_of(catalog: &Catalog, element: &Element) -> Option<String> {
     let statements: Vec<String> = catalog
@@ -72,17 +71,4 @@ fn words(text: &str) -> impl Iterator<Item = &str> {
     text.split_whitespace()
 }
 
-pub(super) fn source_of(projection: &Projection, element: &Element) -> Option<String> {
-    if element.kind == Kind::Module {
-        return projection.file(&element.module).map(|file| file.text.clone());
-    }
-    let span = projection
-        .spans
-        .iter()
-        .find(|span| span.element == element.id)?;
-    let file = projection.file(&span.path)?;
-    let lines: Vec<&str> = file.text.lines().collect();
-    let start = span.first.saturating_sub(1) as usize;
-    let end = span.last as usize;
-    lines.get(start..end).map(|slice| slice.join("\n"))
-}
+

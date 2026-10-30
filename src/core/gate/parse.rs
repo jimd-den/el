@@ -13,10 +13,25 @@ use crate::core::text::json::{self, Json};
 /// and, when that element is a statement, its owning item.
 pub type Attribute<'a> = dyn Fn(&str, u32) -> Option<(ElId, Option<ElId>)> + 'a;
 
-pub fn parse_cargo_json(stdout: &str, attribute: &Attribute<'_>) -> Vec<Diagnostic> {
-    let mut found = Vec::new();
+/// What one cargo run's output parses to: the diagnostics, the lines
+/// that were not JSON (build-script chatter, plain cargo notes), and
+/// the run's exit code. Non-JSON lines are preserved beside the
+/// diagnostics, never silently dropped and never mistaken for a verdict.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Parsed {
+    pub diagnostics: Vec<Diagnostic>,
+    pub non_json: Vec<String>,
+    /// The run's exit code, when the caller ran a command. The parser
+    /// itself leaves this `None`; a runner fills it in.
+    pub exit_code: Option<i32>,
+}
+
+pub fn parse_cargo_json(stdout: &str, attribute: &Attribute<'_>) -> Parsed {
+    let mut diagnostics = Vec::new();
+    let mut non_json = Vec::new();
     for line in stdout.lines() {
         let Some(frame) = json::parse(line) else {
+            non_json.push(line.to_string());
             continue;
         };
         if frame.get("reason").and_then(Json::as_str) != Some("compiler-message") {
@@ -61,7 +76,7 @@ pub fn parse_cargo_json(stdout: &str, attribute: &Attribute<'_>) -> Vec<Diagnost
             Some((el, owner)) => (Some(el), owner, true),
             None => (None, None, false),
         };
-        found.push(Diagnostic {
+        diagnostics.push(Diagnostic {
             code,
             level,
             el,
@@ -73,7 +88,7 @@ pub fn parse_cargo_json(stdout: &str, attribute: &Attribute<'_>) -> Vec<Diagnost
             exact,
         });
     }
-    found
+    Parsed { diagnostics, non_json, exit_code: None }
 }
 
 /// The span the diagnostic is about: the primary one when marked, else the

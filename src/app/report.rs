@@ -59,12 +59,26 @@ pub struct Error {
     pub message: String,
 }
 
+pub use super::report_envelope::{hint_for, EnvelopeDiagnostic, EnvelopeRef, HINTS};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Report {
     pub cmd: &'static str,
     pub seq: Option<u64>,
     pub changed: Vec<Changed>,
     pub gate: Option<Gate>,
+    /// Revision-bound references, empty unless the verb read something.
+    pub refs: Vec<EnvelopeRef>,
+    /// Typed diagnostics. Empty on success; when a verb leaves this
+    /// empty on failure, the renderer derives one entry from `error`.
+    pub diagnostics: Vec<EnvelopeDiagnostic>,
+    /// Evidence for a runner verb (`check`, `fmt`, `lint`, `test`):
+    /// the exact command, scope, exit code and result. None elsewhere.
+    pub evidence: Option<crate::core::text::json::Json>,
+    /// Bounded-result pagination (`discover`): truncation and cursor.
+    pub pagination: Option<crate::core::text::json::Json>,
+    /// History linkage for a move (undo/redo/revert): what was restored.
+    pub history: Option<crate::core::text::json::Json>,
     /// Lines a human wants and a script must not parse (`COMMANDS.md` §6).
     pub lines: Vec<String>,
     /// Prose about the change itself: warnings, what was chosen, what was skipped.
@@ -74,72 +88,6 @@ pub struct Report {
     /// `changed`/`gate`.
     pub payload: Option<crate::core::text::json::Json>,
     pub error: Option<Error>,
-}
-
-/// The next command a refusal names. One line per published code, so a failure
-/// that leaves the user with nowhere to go is a test failure rather than a habit.
-/// The fallback is the page that names every other command.
-pub const HINTS: &[(&str, &str)] = &[
-    ("usage.unknown_verb", "el help"),
-    ("usage.unknown_flag", "el help"),
-    ("usage.unknown_kind", "el help"),
-    ("usage.missing_verb", "el help"),
-    ("usage.missing_argument", "el help"),
-    ("usage.missing_value", "el help"),
-    ("usage.repeated_flag", "el help"),
-    ("usage.bad_value", "el help"),
-    ("usage.unexpected_argument", "el help"),
-    ("usage.unsupported", "el help"),
-    ("usage.no_change", "el help"),
-    ("usage.bad_batch", "el help"),
-    ("usage.bad_script", "el help"),
-    ("usage.conflict", "el help"),
-    ("usage.exists", "el ls"),
-    ("model.ceiling", "el ls"),
-    ("model.duplicate_alias", "el ls"),
-    ("model.dangling_ref", "el rm"),
-    ("model.cross_body_move", "el tree"),
-    ("model.unbalanced", "el help"),
-    ("model.unknown_ref", "el ls"),
-    ("model.bad_ident", "el help"),
-    ("model.fn_budget", "el tree"),
-    ("model.preamble", "el tree"),
-    ("model.forbidden", "el help"),
-    ("model.dep_denied", "el help"),
-    ("model.bad_stmt", "el tree"),
-    ("model.opaque", "el tree"),
-    ("notfound.element", "el ls"),
-    ("notfound.sequence", "el log"),
-    ("gate.rejected", "el diff"),
-    ("gate.would_reject", "el diff"),
-    ("gate.failed", "el check --json"),
-    ("test.failed", "el test"),
-    ("test.compile_failed", "el check"),
-    ("EL_ENV_UNAVAILABLE", "el help"),
-    ("env.not_a_crate", "el new hello"),
-    ("env.not_a_project", "el new hello"),
-    ("env.drift", "el undo"),
-    ("env.bad_policy", "el doctor"),
-    ("env.io", "el doctor"),
-    ("env.corrupt", "el doctor"),
-    ("env.missing_tool", "el help"),
-    ("env.tool_failed", "el doctor"),
-    ("env.timeout", "el doctor"),
-    ("env.run_failed", "el log"),
-    ("env.offline_miss", "el help"),
-    ("conflict.locked", "el doctor"),
-    ("ra.timeout", "el help"),
-    ("internal.panic", "el doctor"),
-];
-
-/// The hint for a code. An unpublished code still gets a valid page rather than
-/// an empty line; the tests above make the table the thing that grows.
-pub fn hint_for(code: &str) -> &'static str {
-    HINTS
-        .iter()
-        .find(|(known, _)| *known == code)
-        .map(|(_, hint)| *hint)
-        .unwrap_or("el help")
 }
 
 impl Error {
@@ -157,6 +105,11 @@ impl Report {
             seq: None,
             changed: Vec::new(),
             gate: None,
+            refs: Vec::new(),
+            diagnostics: Vec::new(),
+            evidence: None,
+            pagination: None,
+            history: None,
             lines: Vec::new(),
             notes: Vec::new(),
             payload: None,

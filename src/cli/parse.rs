@@ -15,7 +15,7 @@ use super::request::{Command, Globals, Mv, Parsed};
 pub const VERBS: &[&str] = &[
     "new", "init", "add", "batch", "edit", "rm", "mv", "run", "log", "version", "ls", "tree",
     "show", "find", "explain", "diff", "undo", "redo", "revert", "doctor", "skill", "help",
-    "apply", "check", "test",
+    "apply", "check", "test", "status", "discover", "read", "fmt", "lint",
 ];
 
 /// Parse a whole command line.
@@ -50,11 +50,28 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
             file: args.words.get(1).cloned(),
         },
         "skill" => Command::Skill,
-        "check" => Command::Check,
+        "check" => Command::Check {
+            scope: args.value("--scope")?,
+        },
         "test" => Command::Test {
             target: args.value("--target")?,
             all: args.has("--all"),
+            scope: args.value("--scope")?,
+            impacted: args.has("--impacted"),
         },
+        "fmt" => {
+            if !args.has("--check") {
+                return Err(Usage::new(
+                    "usage.unsupported",
+                    "fmt only runs --check; formatting writes need a distinct, previewed action",
+                ));
+            }
+            Command::Fmt
+        }
+        "lint" => Command::Lint {
+            scope: args.value("--scope")?,
+        },
+        "status" => Command::Status,
         "explain" => Command::Explain {
             id: args.required("explain")?,
         },
@@ -112,7 +129,7 @@ fn globals(args: &Args) -> Result<Globals, Usage> {
     })
 }
 
-fn count(value: Option<&str>) -> Result<Option<usize>, Usage> {
+pub(super) fn count(value: Option<&str>) -> Result<Option<usize>, Usage> {
     match value {
         None => Ok(None),
         Some(text) => text.parse().map(Some).map_err(|_| {
@@ -133,7 +150,10 @@ fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
         Command::Edit(_) | Command::Show(_) | Command::Find(_) | Command::Explain { .. }
         | Command::Apply { .. } => 2,
         Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. }
-        | Command::Skill | Command::Check | Command::Test { .. } => 1,
+        | Command::Skill | Command::Check { .. } | Command::Test { .. } | Command::Status
+        | Command::Fmt | Command::Lint { .. }
+        | Command::Discover { .. } => 1,
+        Command::Read { .. } => 2,
         Command::Help { .. } => usize::MAX,
         Command::Diff { .. } => 3,
         Command::Undo { .. } | Command::Revert { .. } => 2,

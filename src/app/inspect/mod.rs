@@ -31,6 +31,10 @@ mod show_tests;
 #[path = "show_terse_tests.rs"]
 mod show_terse_tests;
 
+use crate::core::history::sha256;
+use crate::core::model::element::Element;
+use crate::core::model::kind::Kind;
+use crate::core::render::Projection;
 use crate::core::text::json::Json;
 
 /// One read verb's answer in both shapes. `lines` is the human view; `payload`
@@ -39,4 +43,30 @@ use crate::core::text::json::Json;
 pub struct View {
     pub lines: Vec<String>,
     pub payload: Json,
+}
+
+/// The committed source slice for an element: a module is its whole file,
+/// an item is its span's lines. `show --source` and the revision digest
+/// share this, so a digest can never drift from what `read` returns.
+pub fn source_of(projection: &Projection, element: &Element) -> Option<String> {
+    if element.kind == Kind::Module {
+        return projection.file(&element.module).map(|file| file.text.clone());
+    }
+    let span = projection
+        .spans
+        .iter()
+        .find(|span| span.element == element.id)?;
+    let file = projection.file(&span.path)?;
+    let lines: Vec<&str> = file.text.lines().collect();
+    let start = span.first.saturating_sub(1) as usize;
+    let end = span.last as usize;
+    lines.get(start..end).map(|slice| slice.join("\n"))
+}
+
+/// The revision of an element: the digest of its committed source slice.
+/// A body edit changes the span, so it changes the digest; an element
+/// with no span (a module with no file) digests to the empty string.
+pub fn rev_of(projection: &Projection, element: &Element) -> String {
+    let source = source_of(projection, element).unwrap_or_default();
+    format!("sha256:{}", sha256::hex(&sha256::digest(source.as_bytes())))
 }

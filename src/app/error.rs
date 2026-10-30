@@ -48,6 +48,17 @@ pub fn usage(message: impl Into<String>) -> Error {
     }
 }
 
+/// A tool the environment does not have. Every runner verb reports a
+/// missing tool with this code, so a missing cargo is never read as a
+/// verdict about the code.
+pub fn unavailable(message: impl Into<String>) -> Error {
+    Error {
+        code: "EL_ENV_UNAVAILABLE",
+        exit: Exit::Env,
+        message: message.into(),
+    }
+}
+
 pub fn unsupported(command: &'static str, what: &str) -> Error {
     Error {
         code: "usage.unsupported",

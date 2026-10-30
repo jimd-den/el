@@ -19,6 +19,7 @@ pub mod inspect;
 pub mod load;
 pub mod projection;
 pub mod report;
+pub mod report_envelope;
 pub mod transaction;
 pub mod verbs;
 
@@ -85,8 +86,19 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
         Command::Find(find) => verbs::find(env, &find.query),
         Command::Explain { id } => verbs::explain(env, id),
         Command::Batch => verbs::batch(env, &parsed.globals, stdin),
-        Command::Check => verbs::check(env, &parsed.globals),
-        Command::Test { target, all } => verbs::test(env, target.as_deref(), *all),
+        Command::Check { scope } => verbs::check(env, &parsed.globals, scope.as_deref()),
+        Command::Test { target, all, scope, impacted } => {
+            verbs::test(env, target.as_deref(), *all, scope.as_deref(), *impacted)
+        }
+        Command::Fmt => verbs::fmt(env),
+        Command::Lint { scope } => verbs::lint(env, scope.as_deref()),
+        Command::Status => verbs::status(env),
+        Command::Discover { query, limit, cursor } => {
+            verbs::discover(env, query, *limit, *cursor)
+        }
+        Command::Read { reference, rev, lines } => {
+            verbs::read_ref(env, reference, rev.as_deref(), *lines)
+        }
         Command::Apply { file } => verbs::apply(env, &parsed.globals, file.as_deref(), stdin),
         Command::Skill => verbs::guide("skill"),
         Command::Help { .. } => verbs::guide("help"),

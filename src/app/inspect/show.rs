@@ -5,7 +5,8 @@
 
 use super::View;
 pub(crate) use self::context::{doc_of, mentions};
-use self::context::{owning_sequence, source_of};
+use self::context::owning_sequence;
+use super::source_of;
 use self::detail::{entry_json, statement_json, statement_lines};
 use crate::core::history::entry::Entry;
 use crate::core::model::catalog::Catalog;

@@ -5,7 +5,7 @@
 
 use crate::app::error::Error;
 use crate::app::{Env, Exit};
-use crate::core::gate::{delta, verdict, Delta, Diagnostic, Tier};
+use crate::core::gate::{delta, verdict, Delta, Diagnostic, Parsed, Tier};
 use crate::core::history::object::Digest;
 use crate::core::history::tree::Tree;
 use crate::core::model::catalog::Catalog;
@@ -15,15 +15,16 @@ mod baseline;
 mod run;
 
 pub(crate) use baseline::write_baseline;
+pub(crate) use run::tier_argv;
 
-/// The full diagnostic set a tier reports, with no baseline and no delta. `el
-/// check` uses this; a transaction uses `evaluate` so it can compare.
+/// The full parsed output a tier reports, with no baseline and no delta.
+/// `el check` uses this; a transaction uses `evaluate` so it can compare.
 pub(crate) fn diagnostics(
     env: &Env<'_>,
     tier: Tier,
     catalog: &Catalog,
     projection: &Projection,
-) -> Result<Vec<Diagnostic>, Error> {
+) -> Result<Parsed, Error> {
     run::run_tier(env, tier, catalog, projection)
 }
 
@@ -83,7 +84,7 @@ pub fn evaluate(input: Input) -> Result<Evaluation, Error> {
             current: vec![],
         });
     }
-    let current = run::run_tier(input.env, input.tier, input.catalog, input.projection)?;
+    let current = run::run_tier(input.env, input.tier, input.catalog, input.projection)?.diagnostics;
     let baseline = baseline::load_or_compute_baseline(&input)?;
     let delta = delta(&baseline, &current);
     Ok(Evaluation { delta, current })

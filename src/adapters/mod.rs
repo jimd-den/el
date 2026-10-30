@@ -7,6 +7,7 @@ pub mod fs_local;
 pub mod lock;
 pub mod out_human;
 pub mod out_json;
+mod out_json_fields;
 pub mod store;
 pub mod tools_proc;
 

@@ -32,6 +32,16 @@ pub fn el(cwd: &Path, args: &[&str]) -> Output {
         .unwrap_or_else(|error| panic!("run el {args:?}: {error}"))
 }
 
+/// `el` with an overridden `PATH`, for tests that need a tool to be absent.
+pub fn el_env(cwd: &Path, args: &[&str], path: &str) -> Output {
+    Command::new(BIN)
+        .current_dir(cwd)
+        .args(args)
+        .env("PATH", path)
+        .output()
+        .unwrap_or_else(|error| panic!("run el {args:?}: {error}"))
+}
+
 pub fn el_stdin(cwd: &Path, args: &[&str], body: &str) -> Output {
     let mut child = Command::new(BIN)
         .current_dir(cwd)

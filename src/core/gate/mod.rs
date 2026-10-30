@@ -11,7 +11,7 @@ pub mod parse;
 pub use baseline::{decode as decode_baseline, encode as encode_baseline};
 pub use delta::{Delta, delta, verdict};
 pub use diagnostics::{Diagnostic, Level};
-pub use parse::parse_cargo_json;
+pub use parse::{parse_cargo_json, Parsed};
 
 /// A gate tier. L3 (`semantic`, rust-analyzer) arrives in M10 and is not a
 /// variant here: naming it would promise a tier nothing runs.
