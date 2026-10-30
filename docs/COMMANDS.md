@@ -207,7 +207,28 @@ el lint  [--scope <s>] [--json]
 el build [--release] [--json]
 el run   [-- <program args>] [--json]
 el fix   <id> (--list | --apply <code>:<n>) [--json]
+el tdd   <start|red|green|impacted|all|verify|abandon> [--target <id>] [--json]
 ```
+
+`tdd` is built: the enforced strict cycle (ADR-0037), one active run per crate, state
+at `.el/runs/<run-id>/record` with `.el/runs/active` marking the live one. `start`
+requires `--target <id>` and refuses while a run is active; it records the test lock
+(every test element's revision digest), the production baseline, and the config lock
+(sha256 of `el.policy` and `Cargo.toml`). `red` proves the target fails by assertion —
+a compile error, a missing test, or a timeout is `EL_INVALID_RED`, never red evidence —
+and re-captures the test lock at red time. `green` proves the target passes with the
+test lock and config exactly as red froze them; a changed test is `EL_TEST_LOCKED`, a
+target that still fails is `EL_GATE_FAILED`, and the blessed production baseline moves
+to the green state. `impacted` runs the target plus every test whose statements mention
+a production element changed since green (whole-word, catalog scan); a changed element
+with no name to scan for (an impl block) makes impact unavailable and the full suite
+runs instead, recorded as `data.fallback: "all"`. `all` runs the canonical suite with
+nothing moved since impacted. `verify` requires `cargo check --all-targets` to pass and
+every lock frozen since the last blessed state, then closes the run (the record stays
+as history). `abandon` closes a run early from any phase. Wrong-phase and stale-baseline
+refusals are `EL_TDD_PHASE` (exit 5); a missing cargo is `EL_ENV_UNAVAILABLE` (exit 4).
+A test that genuinely needs correction requires a fresh cycle: `green` never accepts a
+test change.
 
 `check` is built: it runs the tier the policy selects (or `--fast`/`--strict`), reports every
 diagnostic the compiler gave, and writes nothing — reporting, not refusal (ADR-0026). It exits
