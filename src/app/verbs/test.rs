@@ -15,12 +15,20 @@
 // is refused first, so executed tests are never silently misattributed to
 // catalog elements they no longer match.
 
-use super::super::error::Error;
+use super::super::error::{self, Error};
 use super::super::{load, projection, Env, Exit, Report};
+use super::scope::evidence_scope;
 use crate::core::model::kind::Kind;
+use crate::core::text::json::Json;
 use std::time::Instant;
 
-pub fn test(env: &Env<'_>, target: Option<&str>, all: bool) -> Report {
+pub fn test(
+    env: &Env<'_>,
+    target: Option<&str>,
+    all: bool,
+    scope: Option<&str>,
+    impacted: bool,
+) -> Report {
     if target.is_some() && all {
         return Report::fail(
             "test",
@@ -28,6 +36,16 @@ pub fn test(env: &Env<'_>, target: Option<&str>, all: bool) -> Report {
                 code: "usage.conflict",
                 exit: Exit::Usage,
                 message: "--target and --all select different runs; give one".to_string(),
+            },
+        );
+    }
+    if target.is_some() && scope.is_some() {
+        return Report::fail(
+            "test",
+            Error {
+                code: "usage.conflict",
+                exit: Exit::Usage,
+                message: "--target and --scope select different filters; give one".to_string(),
             },
         );
     }
@@ -46,7 +64,7 @@ pub fn test(env: &Env<'_>, target: Option<&str>, all: bool) -> Report {
             Ok(name) => Some(name),
             Err(error) => return Report::fail("test", error),
         },
-        None => None,
+        None => scope.map(str::to_string),
     };
     if env.fs.exists(".el/version").unwrap_or(false) {
         let catalog = match load::catalog(env) {
@@ -67,14 +85,7 @@ pub fn test(env: &Env<'_>, target: Option<&str>, all: bool) -> Report {
         Ok(finished) => finished,
         Err(failure) => {
             if failure.missing {
-                return Report::fail(
-                    "test",
-                    Error {
-                        code: "EL_ENV_UNAVAILABLE",
-                        exit: Exit::Env,
-                        message: failure.to_string(),
-                    },
-                );
+                return Report::fail("test", error::unavailable(failure.to_string()));
             }
             return Report::fail(
                 "test",
@@ -97,7 +108,31 @@ pub fn test(env: &Env<'_>, target: Option<&str>, all: bool) -> Report {
         );
     }
     let ms = started.elapsed().as_millis() as u64;
-    super::test_report::report(&finished.stdout, finished.code, ms)
+    let mut report = super::test_report::report(&finished.stdout, finished.code, ms);
+    let result = if report.error.is_some() { "failed" } else { "passed" };
+    let mut payload = report.payload.take().unwrap_or(Json::Object(vec![]));
+    if let Json::Object(fields) = &mut payload {
+        fields.push(("test".to_string(), Json::Str(result.to_string())));
+        fields.push(("check".to_string(), Json::Str("not_run".to_string())));
+        fields.push(("fmt".to_string(), Json::Str("not_run".to_string())));
+        fields.push(("lint".to_string(), Json::Str("not_run".to_string())));
+        if impacted {
+            fields.push(("fallback".to_string(), Json::Str("all".to_string())));
+        }
+    }
+    report.payload = Some(payload);
+    report.evidence = Some(Json::Object(vec![
+        ("kind".to_string(), Json::Str("test".to_string())),
+        (
+            "command".to_string(),
+            Json::Array(argv.iter().map(|arg| Json::Str(arg.clone())).collect()),
+        ),
+        ("scope".to_string(), evidence_scope(env, scope, &["default"], &argv)),
+        ("exit_code".to_string(), Json::Number(finished.code.to_string())),
+        ("elapsed_ms".to_string(), Json::Number(ms.to_string())),
+        ("result".to_string(), Json::Str(result.to_string())),
+    ]));
+    report
 }
 
 /// The bare test name for a `--target` id, from the catalog.

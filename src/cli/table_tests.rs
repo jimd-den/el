@@ -45,9 +45,9 @@ fn the_page_groups_verbs_by_task() {
     let page = guide();
     let groups: &[(&str, &[&str])] = &[
         ("write", &["new", "init", "add", "batch", "apply", "edit", "rm", "mv"]),
-        ("read", &["ls", "tree", "show", "find", "explain", "diff", "log"]),
+        ("read", &["ls", "tree", "show", "find", "explain", "diff", "log", "status", "discover", "read"]),
         ("history", &["undo", "redo", "revert"]),
-        ("verify", &["run", "check", "test", "doctor"]),
+        ("verify", &["run", "check", "test", "fmt", "lint", "doctor"]),
         ("meta", &["version", "skill", "help"]),
     ];
     for (index, (group, verbs)) in groups.iter().enumerate() {

@@ -13,6 +13,7 @@ use std::fmt;
 pub const VALUE_FLAGS: &[&str] = &[
     "--in", "--after", "--before", "--at", "--vis", "--sig", "--body", "--doc", "--attr",
     "--preamble", "--root", "--edition", "--body-mode", "--limit", "--module", "--kind",
+    "--query", "--cursor", "--rev", "--lines", "--scope",
     "--rename", "-n", "--takes", "--returns", "--type", "--value", "--target",
 ];
 
@@ -22,7 +23,7 @@ pub const BOOL_FLAGS: &[&str] = &[
     "--json", "--quiet", "--dry-run", "--yes", "--no-color", "--fast", "--strict",
     "--semantic", "--verbose", "--lib", "--policy", "--force", "--cascade", "--attic",
     "--repair", "--rebuild", "--statements", "--source", "--history", "--terse",
-    "--opaque", "--help", "--all",
+    "--opaque", "--help", "--all", "--check", "--impacted",
 ];
 
 /// A command line `el` refuses to understand.

@@ -5,8 +5,18 @@
 // re-parsed would not notice.
 
 use super::*;
-use crate::app::report::Error;
+use crate::app::report::{Changed, Error, Gate};
 use crate::app::Exit;
+
+/// The rendered text with its one non-deterministic field removed, so
+/// the deterministic fields still byte-compare. The id's shape is
+/// asserted separately.
+fn without_request_id(text: &str) -> String {
+    let start = text.find(r#""request_id":""#).expect("request_id present");
+    let after = &text[start..];
+    let end = start + after.find(',').expect("request_id comma") + 1;
+    format!("{}{}", &text[..start], &text[end..])
+}
 
 fn sample() -> Report {
     Report {
@@ -17,6 +27,11 @@ fn sample() -> Report {
             id: "el-0007".to_string(),
             alias: Some("core::plan::apply".to_string()),
         }],
+        refs: vec![],
+        diagnostics: vec![],
+        evidence: None,
+        pagination: None,
+        history: None,
         gate: Some(Gate {
             tier: "model".to_string(),
             new: 0,
@@ -35,13 +50,18 @@ fn sample() -> Report {
 
 #[test]
 fn a_success_envelope_is_exactly_the_published_fields_in_order() {
+    let text = render(&sample());
+
+    assert!(text.contains(r#""request_id":"req-"#), "{text}");
     assert_eq!(
-        render(&sample()),
+        without_request_id(&text),
         concat!(
-            r#"{"el":"1","cmd":"add","ok":true,"seq":42,"#,
+            r#"{"el":"1","schema_version":"1","cmd":"add","action":"add","#,
+            r#""ok":true,"status":"passed","seq":42,"#,
             r#""changed":[{"op":"add","id":"el-0007","alias":"core::plan::apply"}],"#,
             r#""gate":{"tier":"model","new":0,"fixed":1,"existing":5,"verdict":"ok","ms":812},"#,
-            r#""notes":["rust-analyzer 2026-10-13 used for rename"]}"#,
+            r#""notes":["rust-analyzer 2026-10-13 used for rename"],"#,
+            r#""data":{},"refs":[],"diagnostics":[],"next":[]}"#,
             "\n"
         )
     );
@@ -66,6 +86,12 @@ fn a_failure_envelope_carries_the_code_and_the_exit_code_and_no_seq() {
         "{text}"
     );
     assert!(!text.contains(r#""seq""#), "a refusal has no sequence number: {text}");
+    assert!(text.contains(r#""status":"refused""#), "{text}");
+    assert!(
+        text.contains(r#""diagnostics":[{"code":"model.ceiling","message":"src/core/plan.rs would be 204 lines","hint":"el ls"}]"#),
+        "{text}"
+    );
+    assert!(text.contains(r#""next":["el ls"]"#), "{text}");
     assert!(text.ends_with("}\n"), "the envelope is one line: {text:?}");
 }
 
@@ -77,11 +103,15 @@ fn verb_specific_data_is_the_last_field_and_keeps_its_canonical_bytes() {
         ("gate".to_string(), Json::Str("model".to_string())),
     ])]));
 
+    let text = render(&report);
+
+    assert!(text.contains(r#""request_id":"req-"#), "{text}");
     assert_eq!(
-        render(&report),
+        without_request_id(&text),
         concat!(
-            r#"{"el":"1","cmd":"log","ok":true,"changed":[],"#,
-            r#""data":[{"seq":1,"gate":"model"}]}"#,
+            r#"{"el":"1","schema_version":"1","cmd":"log","action":"log","#,
+            r#""ok":true,"status":"passed","changed":[],"#,
+            r#""data":[{"seq":1,"gate":"model"}],"refs":[],"diagnostics":[],"next":[]}"#,
             "\n"
         )
     );
@@ -90,8 +120,18 @@ fn verb_specific_data_is_the_last_field_and_keeps_its_canonical_bytes() {
 #[test]
 fn an_empty_change_list_is_success_not_silence() {
     let report = Report::new("rm");
+    let text = render(&report);
 
-    assert_eq!(render(&report), "{\"el\":\"1\",\"cmd\":\"rm\",\"ok\":true,\"changed\":[]}\n");
+    assert!(text.contains(r#""request_id":"req-"#), "{text}");
+    assert_eq!(
+        without_request_id(&text),
+        concat!(
+            r#"{"el":"1","schema_version":"1","cmd":"rm","action":"rm","#,
+            r#""ok":true,"status":"passed","changed":[],"#,
+            r#""data":{},"refs":[],"diagnostics":[],"next":[]}"#,
+            "\n"
+        )
+    );
 }
 
 #[test]

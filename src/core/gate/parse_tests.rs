@@ -22,7 +22,7 @@ fn attribute_main_line_3(path: &str, line: u32) -> Option<(ElId, Option<ElId>)> 
 fn an_e0601_frame_parses_and_its_failure_note_is_ignored() {
     let text = include_str!("../../../tests/fixtures/cargo-json/e0601.jsonl");
 
-    let found = parse_cargo_json(text, &never_attribute);
+    let found = parse_cargo_json(text, &never_attribute).diagnostics;
 
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].code, "E0601");
@@ -35,7 +35,7 @@ fn an_e0601_frame_parses_and_its_failure_note_is_ignored() {
 fn duplicate_frames_are_kept_raw_for_the_delta_to_collapse() {
     let text = include_str!("../../../tests/fixtures/cargo-json/warning_and_e0308.jsonl");
 
-    let found = parse_cargo_json(text, &never_attribute);
+    let found = parse_cargo_json(text, &never_attribute).diagnostics;
 
     assert_eq!(found.len(), 2);
     assert!(found.iter().all(|diag| diag.code == "E0308"));
@@ -45,7 +45,7 @@ fn duplicate_frames_are_kept_raw_for_the_delta_to_collapse() {
 fn a_warning_frame_parses_with_its_warning_level() {
     let text = include_str!("../../../tests/fixtures/cargo-json/warning.jsonl");
 
-    let found = parse_cargo_json(text, &never_attribute);
+    let found = parse_cargo_json(text, &never_attribute).diagnostics;
 
     assert_eq!(found.len(), 2);
     assert!(found.iter().all(|diag| diag.code == "unused_variables"));
@@ -56,7 +56,7 @@ fn a_warning_frame_parses_with_its_warning_level() {
 fn a_clippy_code_arrives_already_namespaced_and_is_kept_as_is() {
     let text = include_str!("../../../tests/fixtures/cargo-json/clippy.jsonl");
 
-    let found = parse_cargo_json(text, &never_attribute);
+    let found = parse_cargo_json(text, &never_attribute).diagnostics;
 
     assert_eq!(found.len(), 2);
     assert!(found
@@ -70,7 +70,7 @@ fn an_attributed_span_names_the_statement_and_its_owner() {
     // un-attributes E0601, so the same intent rides an E0425 frame instead.
     let text = "{\"reason\":\"compiler-message\",\"message\":{\"level\":\"error\",\"code\":{\"code\":\"E0425\"},\"message\":\"cannot find value `x` in this scope\",\"spans\":[{\"file_name\":\"src/main.rs\",\"line_start\":3,\"column_start\":5,\"is_primary\":true}]}}\n";
 
-    let found = parse_cargo_json(text, &attribute_main_line_3);
+    let found = parse_cargo_json(text, &attribute_main_line_3).diagnostics;
 
     assert_eq!(found.len(), 1);
     assert!(found[0].exact);
@@ -82,7 +82,7 @@ fn an_attributed_span_names_the_statement_and_its_owner() {
 fn an_e0601_is_never_attributed_because_it_names_the_crate() {
     let text = include_str!("../../../tests/fixtures/cargo-json/e0601.jsonl");
 
-    let found = parse_cargo_json(text, &attribute_main_line_3);
+    let found = parse_cargo_json(text, &attribute_main_line_3).diagnostics;
 
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].code, "E0601");
@@ -94,7 +94,7 @@ fn an_e0601_is_never_attributed_because_it_names_the_crate() {
 fn non_compiler_message_frames_are_ignored() {
     let text = "{\"reason\":\"compiler-artifact\",\"package_id\":\"x\"}\n{\"reason\":\"build-finished\",\"success\":false}\n";
 
-    let found = parse_cargo_json(text, &never_attribute);
+    let found = parse_cargo_json(text, &never_attribute).diagnostics;
 
     assert!(found.is_empty());
 }
@@ -103,7 +103,7 @@ fn non_compiler_message_frames_are_ignored() {
 fn a_malformed_line_is_skipped_not_fatal() {
     let text = "this is not json\n{\"reason\":\"build-finished\",\"success\":true}\n";
 
-    let found = parse_cargo_json(text, &never_attribute);
+    let found = parse_cargo_json(text, &never_attribute).diagnostics;
 
     assert!(found.is_empty());
 }
@@ -115,8 +115,25 @@ fn a_malformed_line_is_skipped_not_fatal() {
 fn a_frame_without_a_code_says_so_instead_of_leaving_it_empty() {
     let text = r#"{"reason":"compiler-message","message":{"level":"error","message":"expected one of `->`, `<`, `where`, or `{`, found `b`","code":null,"spans":[{"file_name":"src/main.rs","line_start":19,"column_start":6,"is_primary":true}]}}"#;
 
-    let found = parse_cargo_json(text, &never_attribute);
+    let found = parse_cargo_json(text, &never_attribute).diagnostics;
 
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].code, "uncoded");
+}
+
+#[test]
+fn non_json_lines_are_preserved_beside_the_diagnostics() {
+    let text = concat!(
+        "a raw build-script line\n",
+        r#"{"reason":"compiler-message","message":{"level":"error","message":"mismatched types","code":{"code":"E0308"},"spans":[{"file_name":"src/main.rs","line_start":3,"column_start":1,"is_primary":true}]}}"#,
+        "\n",
+        r#"{"reason":"build-finished","success":false}"#,
+        "\n",
+    );
+
+    let parsed = parse_cargo_json(text, &never_attribute);
+
+    assert_eq!(parsed.diagnostics.len(), 1);
+    assert_eq!(parsed.diagnostics[0].code, "E0308");
+    assert_eq!(parsed.non_json, vec!["a raw build-script line".to_string()]);
 }

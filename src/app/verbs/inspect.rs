@@ -127,7 +127,7 @@ fn report(cmd: &'static str, view: inspect::View) -> Report {
     report
 }
 
-fn prepare(env: &Env<'_>) -> Result<(Catalog, Projection), error::Error> {
+pub(super) fn prepare(env: &Env<'_>) -> Result<(Catalog, Projection), error::Error> {
     load::ensure_crate(env)?;
     let catalog = load::catalog(env)?;
     let projection = render(&catalog, &env.crate_name);

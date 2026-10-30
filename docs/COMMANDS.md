@@ -173,6 +173,9 @@ el find <query> [--json]
 el explain <id> [--json]
 el refs <id> [--json]
 el catalog [--json]
+el status [--json]
+el discover --query <text> [--limit <n>] [--cursor <n>] [--json]
+el read <ref> [--rev <digest>] [--lines <start>:<end>] [--json]
 ```
 
 | Verb | Answers |
@@ -184,6 +187,9 @@ el catalog [--json]
 | `explain` | Why it exists: module preamble, doc text, RA hover when available (`FR-55`), callers, tests that name it, last 5 history entries |
 | `refs` | Who refers to it, via RA (`"source":"ra"`) or the catalog (`"source":"catalog"`) (`FR-50`) |
 | `catalog` | The complete machine model: every element, module, dep, policy key (`FR-4`) |
+| `status` | Preflight: root, crate, catalog presence, journal head, policy, tool availability, and the four component statuses — all `not_run`, because status itself runs nothing and never claims tests passed merely because they have not run |
+| `discover` | Bounded ranked discovery: name-exact, then name-substring, then alias, then module; `--limit` (default 20, max 100) bounds the page and `--cursor` continues it; each result carries its revision digest and the envelope's `refs` stand on the returned page |
+| `read` | A narrow, revision-bound source range: the reference is an id or an alias, `--lines start:end` slices it (1-based, inclusive), and `--rev` pins the digest the target must still have. A pin that no longer matches is `EL_STALE_REF` (exit 5) with the expected and observed digests named. `read` is opt-in pinning; `show`, `ls` and `find` keep ADR-0020's drift-tolerant contract |
 
 `explain` is built and catalog-only: module preamble, doc text, whole-word callers, functions
 named like tests, and the last five entries. It prints `source  catalog (rust-analyzer not
@@ -194,8 +200,10 @@ the "which ids answer to this name" question until `refs` lands.
 ### 4.4 Verify
 
 ```text
-el check [--strict|--semantic|--fast] [--json]
-el test  [--target <id>|--all] [--json]
+el check [--strict|--semantic|--fast] [--scope <s>] [--json]
+el test  [--target <id>|--all] [--scope <s>] [--impacted] [--json]
+el fmt   --check [--json]
+el lint  [--scope <s>] [--json]
 el build [--release] [--json]
 el run   [-- <program args>] [--json]
 el fix   <id> (--list | --apply <code>:<n>) [--json]
@@ -217,6 +225,24 @@ rejection; a suite that does not compile exits 3 with code `test.compile_failed`
 next `el check`, so a compile error never masquerades as behavior evidence. Missing
 cargo is `EL_ENV_UNAVAILABLE`, never a test verdict. `test` is on-demand evidence,
 not a gate tier: it never refuses a commit and never changes what the gate checks.
+`--scope <s>` filters execution by cargo's own substring filter, and conflicts with
+`--target`; `--impacted` runs the full suite and says so (`data.fallback: "all"`),
+because no reliable dependency metadata exists yet to select an impacted set.
+`fmt` is built and non-mutating only: `fmt --check` runs `cargo fmt --all -- --check`
+and reports the diff; bare `fmt` is refused, and there is no fix mode. `lint` is
+built: it runs `cargo clippy --all-targets --message-format=json` under the project's
+own lints — el injects no `-D warnings` here, that strictness belongs to the L2 gate.
+A lint run whose warnings exit zero passes with a warnings count; errors fail.
+Every runner verb (`check`, `fmt`, `lint`, `test`) reports all four component
+statuses in `data` — its own verdict, the others `not_run` — and an `evidence`
+object with the exact command, the scope (manifest, packages, targets, features,
+toolchain, triple, requested scope), the exit code, the elapsed time and the
+result. A `--scope` is recorded in evidence; for `check` and `lint` it does not
+filter the verdict, because cargo runs crate-wide and a filtered verdict would
+disagree with the diagnostics it stands on (ADR-0035). A missing cargo is
+`EL_ENV_UNAVAILABLE` (exit 4, status `blocked`) for every runner verb, never a
+gate failure; non-JSON cargo output lines are preserved in `data.non_json_lines`
+(capped at 20) instead of being dropped.
 The loop's red and green steps are `cargo test`, not `el check`: the gate runs
 `cargo check`, which does not run tests, so a failing test commits. `run` does
 **not** gate first — after drift refusal, disk equals the head projection, so a gate would
@@ -292,12 +318,20 @@ Success:
 ```json
 {
   "el": "1",
+  "schema_version": "1",
+  "request_id": "req-31283-1793252491392",
   "cmd": "add",
+  "action": "add",
   "ok": true,
+  "status": "passed",
   "seq": 42,
   "changed": [{"op": "add", "id": "el-0007", "alias": "core::plan::apply"}],
   "gate": {"tier": "check", "new": 0, "fixed": 1, "existing": 5, "verdict": "ok", "ms": 812},
-  "notes": ["el: rewrote 1 file"]
+  "notes": ["el: rewrote 1 file"],
+  "data": {},
+  "refs": [],
+  "diagnostics": [],
+  "next": []
 }
 ```
 
@@ -306,8 +340,12 @@ Failure:
 ```json
 {
   "el": "1",
+  "schema_version": "1",
+  "request_id": "req-31283-1793252491392",
   "cmd": "add",
+  "action": "add",
   "ok": false,
+  "status": "failed",
   "error": {"code": "gate.rejected", "exit": 3, "message": "1 new error", "hint": "el diff"},
   "gate": {
     "tier": "check", "new": 1, "fixed": 0, "existing": 4, "verdict": "rejected",
@@ -318,13 +356,26 @@ Failure:
       "message": "mismatched types: expected u32, found &u32", "exact": true,
       "first_actionable": true
     }]
-  }
+  },
+  "data": {},
+  "refs": [],
+  "diagnostics": [{"code": "gate.rejected", "message": "1 new error", "hint": "el diff"}],
+  "next": ["el diff"]
 }
 ```
 
-Stable fields (contract): `el`, `cmd`, `ok`, `error.code`, `error.exit`, `error.hint`, `seq`,
-`changed[].op`, `changed[].id`, `gate.*`,
-`diagnostics[].{code,level,el,owner,path,line,col,message,exact,first_actionable}`.
+Stable fields (contract): `el`, `schema_version`, `request_id`, `cmd`, `action`, `ok`,
+`status`, `error.code`, `error.exit`, `error.hint`, `seq`,
+`changed[].op`, `changed[].id`, `gate.*`, `data`,
+`refs[].{ref,rev}`, `diagnostics[].{code,message,hint,expected,observed,ref}`,
+`next[]`, and, when applicable, `evidence`, `pagination`, `history`.
+`status` is `passed` on success, `restored` for a successful history move, `refused`
+for a validation or unknown-target refusal, `blocked` when state or environment
+prevents the run, and `failed` when verification ran and failed. `data` is always
+present (an empty object when the verb has no payload); `request_id` is the one
+field that is not byte-pinned, because it carries the process id and wall-clock
+time. A verb that sets typed diagnostics (such as `read`'s stale-reference triple)
+reports them in `diagnostics` instead of the one entry derived from the error.
 A diagnostic the compiler gives no code for — a parse error — reports `uncoded`, never an
 empty string, because `code` is part of the diagnostic's identity.
 

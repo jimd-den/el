@@ -8,13 +8,15 @@
 
 use super::super::transaction;
 use super::super::{error, load, Env, Exit, Report};
+use super::scope::evidence_scope;
 use crate::cli::request::Globals;
-use crate::core::gate::Tier;
+use crate::core::gate::{Parsed, Tier};
 use crate::core::model::catalog::Catalog;
 use crate::core::render::render;
+use crate::core::text::json::Json;
 use std::time::Instant;
 
-pub fn check(env: &Env<'_>, globals: &Globals) -> Report {
+pub fn check(env: &Env<'_>, globals: &Globals, scope: Option<&str>) -> Report {
     if !env.fs.exists("Cargo.toml").unwrap_or(false) {
         return Report::fail(
             "check",
@@ -39,9 +41,9 @@ pub fn check(env: &Env<'_>, globals: &Globals) -> Report {
     };
     let projection = render(&catalog, &env.crate_name);
     let started = Instant::now();
-    let diagnostics = match transaction::diagnostics(env, tier, &catalog, &projection) {
-        Ok(diagnostics) => diagnostics,
-        Err(error) => return Report::fail("check", error),
+    let parsed = match transaction::diagnostics(env, tier, &catalog, &projection) {
+        Ok(parsed) => parsed,
+        Err(error) => return Report::fail("check", remap_missing_tool(error)),
     };
     let ms = started.elapsed().as_millis() as u64;
 
@@ -52,18 +54,44 @@ pub fn check(env: &Env<'_>, globals: &Globals) -> Report {
             "el: check skipped the compiler (gate={})",
             tier.as_str()
         )];
+        report.payload = Some(component_statuses("not_run"));
         return report;
     }
-    report(env, tier, &catalog, diagnostics, ms)
+    report(env, tier, &catalog, parsed, scope, ms)
+}
+
+/// The gate names a missing tool `env.missing_tool`; a reporting verb
+/// names it `EL_ENV_UNAVAILABLE`, so a missing cargo is never read as
+/// a verdict about the code. The gate keeps its own code: commits do
+/// not go through this mapping.
+fn remap_missing_tool(error: error::Error) -> error::Error {
+    if error.code == "env.missing_tool" {
+        error::unavailable(error.message)
+    } else {
+        error
+    }
+}
+
+/// The four component statuses. A verb reports its own and leaves the
+/// others `not_run`: a check that passed says nothing about tests.
+fn component_statuses(check: &str) -> Json {
+    Json::Object(vec![
+        ("check".to_string(), Json::Str(check.to_string())),
+        ("test".to_string(), Json::Str("not_run".to_string())),
+        ("fmt".to_string(), Json::Str("not_run".to_string())),
+        ("lint".to_string(), Json::Str("not_run".to_string())),
+    ])
 }
 
 fn report(
     env: &Env<'_>,
     tier: Tier,
     catalog: &Catalog,
-    diagnostics: Vec<crate::core::gate::Diagnostic>,
+    parsed: Parsed,
+    scope: Option<&str>,
     ms: u64,
 ) -> Report {
+    let diagnostics = &parsed.diagnostics;
     let errors = diagnostics
         .iter()
         .filter(|diag| diag.level == crate::core::gate::Level::Error)
@@ -85,12 +113,12 @@ fn report(
     };
     report.gate = Some(transaction::gate_from_diagnostics(
         tier,
-        &diagnostics,
+        diagnostics,
         if errors == 0 { "ok" } else { "errors" },
         ms,
         &[],
     ));
-    report.lines = transaction::diagnostic_lines(catalog, &diagnostics, &[]);
+    report.lines = transaction::diagnostic_lines(catalog, diagnostics, &[]);
     let label = match tier {
         Tier::Model => "L0 model",
         Tier::Check => "L1 check",
@@ -101,7 +129,58 @@ fn report(
         if errors == 0 { "ok" } else { "failed" },
         diagnostics.len(),
     )];
-    let _ = env;
+    let result = if errors == 0 { "passed" } else { "failed" };
+    report.payload = Some(Json::Object(vec![
+        ("check".to_string(), Json::Str(result.to_string())),
+        ("test".to_string(), Json::Str("not_run".to_string())),
+        ("fmt".to_string(), Json::Str("not_run".to_string())),
+        ("lint".to_string(), Json::Str("not_run".to_string())),
+        (
+            "non_json_lines".to_string(),
+            Json::Array(
+                parsed
+                    .non_json
+                    .iter()
+                    .take(20)
+                    .map(|line| Json::Str(line.clone()))
+                    .collect(),
+            ),
+        ),
+    ]));
+    let commands = transaction::tier_argv(tier);
+    let mut evidence = vec![
+        ("kind".to_string(), Json::Str("check".to_string())),
+        (
+            "command".to_string(),
+            Json::Array(
+                commands[0].iter().map(|arg| Json::Str(arg.clone())).collect(),
+            ),
+        ),
+    ];
+    if commands.len() > 1 {
+        evidence.push((
+            "commands".to_string(),
+            Json::Array(
+                commands
+                    .iter()
+                    .map(|argv| {
+                        Json::Array(argv.iter().map(|arg| Json::Str(arg.clone())).collect())
+                    })
+                    .collect(),
+            ),
+        ));
+    }
+    evidence.push((
+        "scope".to_string(),
+        evidence_scope(env, scope, &["all-targets"], &commands[0]),
+    ));
+    evidence.push((
+        "exit_code".to_string(),
+        parsed.exit_code.map(|code| Json::Number(code.to_string())).unwrap_or(Json::Null),
+    ));
+    evidence.push(("elapsed_ms".to_string(), Json::Number(ms.to_string())));
+    evidence.push(("result".to_string(), Json::Str(result.to_string())));
+    report.evidence = Some(Json::Object(evidence));
     report
 }
 

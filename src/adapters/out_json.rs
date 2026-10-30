@@ -10,15 +10,27 @@
 // of strings and the human view owns the sentences. A field that only a human wants
 // has no place in a machine contract.
 
-use crate::app::report::{Changed, Gate, GateDiagnostic, Report, ENVELOPE};
+use super::out_json_fields::{changed, gate_json};
+use crate::app::report::{Report, ENVELOPE};
 use crate::core::text::json::{self, Json};
 
-fn text(value: &str) -> Json {
+pub(super) fn text(value: &str) -> Json {
     Json::Str(value.to_string())
 }
 
-fn count(value: usize) -> Json {
+pub(super) fn count(value: usize) -> Json {
     Json::Number(value.to_string())
+}
+
+/// Per-invocation id: process id plus wall-clock millis. It is the one
+/// field that cannot be byte-pinned, so the golden tests shape-check it
+/// and byte-compare everything else.
+fn request_id() -> String {
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    format!("req-{}-{millis}", std::process::id())
 }
 
 /// One JSON object for `report`, newline-terminated so it is the last line of stdout.
@@ -27,8 +39,12 @@ pub fn render(report: &Report) -> String {
     let mut push = |key: &str, value: Json| fields.push((key.to_string(), value));
 
     push("el", text(ENVELOPE));
+    push("schema_version", text("1"));
+    push("request_id", text(&request_id()));
     push("cmd", text(report.cmd));
+    push("action", text(report.cmd));
     push("ok", Json::Bool(report.error.is_none()));
+    push("status", text(report.status()));
 
     match &report.error {
         Some(error) => push(
@@ -54,8 +70,38 @@ pub fn render(report: &Report) -> String {
     if !report.notes.is_empty() {
         push("notes", Json::Array(report.notes.iter().map(|note| text(note)).collect()));
     }
-    if let Some(payload) = &report.payload {
-        push("data", payload.clone());
+    push("data", report.payload.clone().unwrap_or(Json::Object(vec![])));
+    push(
+        "refs",
+        Json::Array(
+            report
+                .refs
+                .iter()
+                .map(|reference| {
+                    Json::Object(vec![
+                        ("ref".to_string(), text(&reference.reference)),
+                        ("rev".to_string(), text(&reference.rev)),
+                    ])
+                })
+                .collect(),
+        ),
+    );
+    push("diagnostics", Json::Array(diagnostics(report)));
+    push(
+        "next",
+        match &report.error {
+            Some(error) => Json::Array(vec![text(error.hint())]),
+            None => Json::Array(vec![]),
+        },
+    );
+    if let Some(evidence) = &report.evidence {
+        push("evidence", evidence.clone());
+    }
+    if let Some(pagination) = &report.pagination {
+        push("pagination", pagination.clone());
+    }
+    if let Some(history) = &report.history {
+        push("history", history.clone());
     }
 
     let mut line = json::write(&Json::Object(fields));
@@ -63,56 +109,40 @@ pub fn render(report: &Report) -> String {
     line
 }
 
-fn changed(change: &Changed) -> Json {
-    let mut fields = vec![
-        ("op".to_string(), text(change.op)),
-        ("id".to_string(), text(&change.id)),
-    ];
-    if let Some(alias) = &change.alias {
-        fields.push(("alias".to_string(), text(alias)));
+/// The envelope's diagnostics: the verb's typed list when it set one,
+/// else one entry derived from the failure, else none.
+fn diagnostics(report: &Report) -> Vec<Json> {
+    if !report.diagnostics.is_empty() {
+        return report
+            .diagnostics
+            .iter()
+            .map(|diag| {
+                let mut fields = vec![
+                    ("code".to_string(), text(diag.code)),
+                    ("message".to_string(), text(&diag.message)),
+                    ("hint".to_string(), text(diag.hint)),
+                ];
+                if let Some(expected) = &diag.expected {
+                    fields.push(("expected".to_string(), text(expected)));
+                }
+                if let Some(observed) = &diag.observed {
+                    fields.push(("observed".to_string(), text(observed)));
+                }
+                if let Some(reference) = &diag.reference {
+                    fields.push(("ref".to_string(), text(reference)));
+                }
+                Json::Object(fields)
+            })
+            .collect();
     }
-    Json::Object(fields)
-}
-
-fn gate_json(gate: &Gate) -> Json {
-    let mut fields = vec![
-        ("tier".to_string(), text(&gate.tier)),
-        ("new".to_string(), count(gate.new)),
-        ("fixed".to_string(), count(gate.fixed)),
-        ("existing".to_string(), count(gate.existing)),
-        ("verdict".to_string(), text(&gate.verdict)),
-        ("ms".to_string(), count(gate.ms as usize)),
-    ];
-    if !gate.diagnostics.is_empty() {
-        fields.push((
-            "diagnostics".to_string(),
-            Json::Array(gate.diagnostics.iter().map(diag_json).collect()),
-        ));
+    match &report.error {
+        Some(error) => vec![Json::Object(vec![
+            ("code".to_string(), text(error.code)),
+            ("message".to_string(), text(&error.message)),
+            ("hint".to_string(), text(error.hint())),
+        ])],
+        None => vec![],
     }
-    Json::Object(fields)
-}
-
-fn diag_json(diag: &GateDiagnostic) -> Json {
-    let mut fields = vec![
-        ("code".to_string(), text(&diag.code)),
-        ("level".to_string(), text(&diag.level)),
-    ];
-    if let Some(el) = &diag.el {
-        fields.push(("el".to_string(), text(el)));
-    }
-    if let Some(owner) = &diag.owner {
-        fields.push(("owner".to_string(), text(owner)));
-    }
-    fields.push(("path".to_string(), text(&diag.path)));
-    fields.push(("line".to_string(), count(diag.line as usize)));
-    fields.push(("col".to_string(), count(diag.col as usize)));
-    fields.push(("message".to_string(), text(&diag.message)));
-    fields.push(("exact".to_string(), Json::Bool(diag.exact)));
-    fields.push((
-        "first_actionable".to_string(),
-        Json::Bool(diag.first_actionable),
-    ));
-    Json::Object(fields)
 }
 
 #[cfg(test)]

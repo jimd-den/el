@@ -20,6 +20,9 @@ read
   explain  explain <id>                               preamble, doc, callers, tests, history
   log      log [-n <count>] [--attic]                 the journal
   diff     diff [<a>] [<b>]                           elements and files between sequences
+  status   status                                     preflight: root, head, policy, tools
+  discover discover --query <text> [--limit <n>] [--cursor <n>] bounded ranked discovery
+  read     read <ref> [--rev <digest>] [--lines <start>:<end>] narrow revision-bound source range
 history
   undo     undo [<n>]                                 append an entry restoring an earlier state
   redo     redo                                       append an entry restoring an undone state
@@ -28,7 +31,9 @@ verify
   run      run [-- args…]                             cargo run, streams output
   doctor   doctor [--repair|--rebuild]                crate health, recovery
   check    check [--fast|--strict]                    the compiler's report, no refusal
-  test     test [--target <id>|--all]                 execute tests, report execution
+  test     test [--target <id>|--all] [--scope <s>] [--impacted] execute tests, report execution
+  fmt      fmt --check                                non-mutating format evidence
+  lint     lint [--scope <s>]                         clippy evidence, never fixes
 meta
   version  version                                    the package version
   skill    skill                                      this page
@@ -96,7 +101,14 @@ universal flags
   --preamble <file|-> a module's prose
   --edition <year> new: the crate edition
   --body-mode <m> split or opaque
-  --limit <n>    search: result limit (not built)
+  --limit <n>    discover: result limit (default 20, max 100)
+  --query <text> discover: substring to rank by name, alias, module
+  --cursor <n>   discover: offset into the ranked results
+  --rev <digest> read: pin the digest the target must still have
+  --lines <start>:<end> read: 1-based inclusive source window
+  --scope <s>    check/lint/test: scope recorded in evidence
+  --check        fmt: non-mutating format check
+  --impacted     test: impacted tests, or the full suite when impact is unknown
   --module <m>   ls: narrow to one module
   --kind <k>     ls: narrow to one kind
   --rename <name> edit: a whole-identifier rename

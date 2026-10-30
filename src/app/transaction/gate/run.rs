@@ -5,10 +5,21 @@
 
 use crate::app::error::Error;
 use crate::app::{Env, Exit};
-use crate::core::gate::{parse_cargo_json, Diagnostic, Tier};
+use crate::core::gate::{parse_cargo_json, Parsed, Tier};
 use crate::core::model::catalog::Catalog;
 use crate::core::render::Projection;
 use crate::ports::tools::Finished;
+
+/// The commands a tier runs, in order. A reporting verb names the
+/// same commands in its evidence instead of inventing its own spelling.
+pub(crate) fn tier_argv(tier: Tier) -> Vec<Vec<String>> {
+    let mut commands = vec![check_argv()];
+    if tier == Tier::Strict {
+        commands.push(clippy_argv());
+        commands.push(test_argv());
+    }
+    commands
+}
 
 fn check_argv() -> Vec<String> {
     ["cargo", "check", "--all-targets", "--message-format=json"]
@@ -40,18 +51,22 @@ fn test_argv() -> Vec<String> {
 }
 
 /// Runs every command the tier names and unions their diagnostics.
+/// The parsed output keeps non-JSON lines beside the diagnostics, and
+/// the last command's exit code, so a reporting verb can show both.
 pub(super) fn run_tier(
     env: &Env,
     tier: Tier,
     catalog: &Catalog,
     projection: &Projection,
-) -> Result<Vec<Diagnostic>, Error> {
+) -> Result<Parsed, Error> {
     let mut commands = vec![check_argv()];
     if tier == Tier::Strict {
         commands.push(clippy_argv());
         commands.push(test_argv());
     }
-    let mut found = Vec::new();
+    let mut diagnostics = Vec::new();
+    let mut non_json = Vec::new();
+    let mut exit_code = None;
     for argv in &commands {
         let finished = env
             .tools
@@ -68,18 +83,20 @@ pub(super) fn run_tier(
                 ),
             });
         }
-        let mut diags = parse_cargo_json(&finished.stdout, &|path, line| {
+        let mut parsed = parse_cargo_json(&finished.stdout, &|path, line| {
             projection.element_at(path, line).map(|el| {
                 let owner = catalog.find_stmt(el).map(|stmt| stmt.owner);
                 (el, owner)
             })
         });
-        if finished.code != 0 && diags.is_empty() {
+        if finished.code != 0 && parsed.diagnostics.is_empty() {
             return Err(tool_failed(&finished, argv));
         }
-        found.append(&mut diags);
+        diagnostics.append(&mut parsed.diagnostics);
+        non_json.append(&mut parsed.non_json);
+        exit_code = Some(finished.code);
     }
-    Ok(found)
+    Ok(Parsed { diagnostics, non_json, exit_code })
 }
 
 fn tool_error(failure: crate::ports::tools::Error) -> Error {

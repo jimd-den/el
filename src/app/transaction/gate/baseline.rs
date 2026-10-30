@@ -44,7 +44,7 @@ pub(super) fn load_or_compute_baseline(input: &Input) -> Result<Vec<Diagnostic>,
     projection::restore(input.env, input.old_tree)?;
     let baseline = run_tier(input.env, input.tier, input.old_catalog, &old_projection);
     projection::materialize(input.env, input.projection, input.old_tree, input.new_tree)?;
-    let baseline = baseline?;
+    let baseline = baseline?.diagnostics;
     write_baseline(input.env, input.old_digest, input.tier, &baseline)?;
     Ok(baseline)
 }
