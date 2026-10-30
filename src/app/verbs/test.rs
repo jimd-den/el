@@ -136,7 +136,7 @@ pub fn test(
 }
 
 /// The bare test name for a `--target` id, from the catalog.
-fn filter_for(env: &Env<'_>, text: &str) -> Result<String, Error> {
+pub(super) fn filter_for(env: &Env<'_>, text: &str) -> Result<String, Error> {
     let id = super::super::change::parse_id(text)?;
     let catalog = if env.fs.exists(".el/version").unwrap_or(false) {
         load::catalog(env)?

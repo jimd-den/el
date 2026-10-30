@@ -64,7 +64,7 @@ const VERB_GROUPS: &[(&str, &[&str])] = &[
     ("write", &["new", "init", "add", "batch", "apply", "edit", "rm", "mv"]),
     ("read", &["ls", "tree", "show", "find", "explain", "diff", "log", "status", "discover", "read"]),
     ("history", &["undo", "redo", "revert"]),
-    ("verify", &["run", "check", "test", "fmt", "lint", "doctor"]),
+    ("verify", &["run", "check", "test", "fmt", "lint", "doctor", "tdd"]),
     ("meta", &["version", "skill", "help"]),
 ];
 
@@ -98,6 +98,7 @@ const VERB_LINES: &[(&str, &str, &str)] = &[
     ("status", "status", "preflight: root, head, policy, tools"),
     ("discover", "discover --query <text> [--limit <n>] [--cursor <n>]", "bounded ranked discovery"),
     ("read", "read <ref> [--rev <digest>] [--lines <start>:<end>]", "narrow revision-bound source range"),
+    ("tdd", "tdd <start|red|green|impacted|all|verify|abandon> [--target <id>]", "enforced strict TDD cycle"),
     ("version", "version", "the package version"),
     ("skill", "skill", "this page"),
     ("help", "help [<verb>] | --help", "this page"),

@@ -20,6 +20,9 @@ pub mod load;
 pub mod projection;
 pub mod report;
 pub mod report_envelope;
+pub mod tdd;
+pub mod tdd_impact;
+pub mod tdd_record;
 pub mod transaction;
 pub mod verbs;
 
@@ -100,6 +103,7 @@ pub fn run(parsed: Parsed, env: &Env<'_>, stdin: &str) -> Report {
             verbs::read_ref(env, reference, rev.as_deref(), *lines)
         }
         Command::Apply { file } => verbs::apply(env, &parsed.globals, file.as_deref(), stdin),
+        Command::Tdd { phase, target } => verbs::tdd(env, phase, target.as_deref()),
         Command::Skill => verbs::guide("skill"),
         Command::Help { .. } => verbs::guide("help"),
     }

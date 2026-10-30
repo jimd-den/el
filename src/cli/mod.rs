@@ -17,6 +17,7 @@ pub mod parse;
 mod parse_history;
 mod parse_mutate;
 mod parse_read;
+mod parse_tdd;
 pub mod request;
 pub mod script;
 pub mod table;

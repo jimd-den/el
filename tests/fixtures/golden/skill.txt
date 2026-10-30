@@ -34,6 +34,7 @@ verify
   test     test [--target <id>|--all] [--scope <s>] [--impacted] execute tests, report execution
   fmt      fmt --check                                non-mutating format evidence
   lint     lint [--scope <s>]                         clippy evidence, never fixes
+  tdd      tdd <start|red|green|impacted|all|verify|abandon> [--target <id>] enforced strict TDD cycle
 meta
   version  version                                    the package version
   skill    skill                                      this page
