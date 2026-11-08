@@ -39,10 +39,13 @@ mod history;
 mod history_moves;
 mod inspect;
 mod read;
+mod test;
+mod test_report;
 
 pub use apply::apply;
 pub use batch::batch;
 pub use check::check;
+pub use test::test;
 pub use diff::diff;
 pub use doctor::doctor;
 pub use history::revert;

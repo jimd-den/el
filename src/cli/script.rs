@@ -19,11 +19,15 @@ impl fmt::Display for Error {
     }
 }
 
-pub fn parse(text: &str) -> Result<Vec<Vec<String>>, Error> {
+/// One change per line, each tagged with its physical line in the file.
+/// Blank and comment lines contribute no change, but the lines after them
+/// keep their file numbers: a failure must name the line the human sees,
+/// not the change's position among the changes.
+pub fn parse(text: &str) -> Result<Vec<(usize, Vec<String>)>, Error> {
     let mut lines = Vec::new();
     for (index, line) in text.lines().enumerate() {
         if let Some(words) = one(line, index + 1)? {
-            lines.push(words);
+            lines.push((index + 1, words));
         }
     }
     Ok(lines)

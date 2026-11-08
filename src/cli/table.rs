@@ -64,7 +64,7 @@ const VERB_GROUPS: &[(&str, &[&str])] = &[
     ("write", &["new", "init", "add", "batch", "apply", "edit", "rm", "mv"]),
     ("read", &["ls", "tree", "show", "find", "explain", "diff", "log"]),
     ("history", &["undo", "redo", "revert"]),
-    ("verify", &["run", "check", "doctor"]),
+    ("verify", &["run", "check", "test", "doctor"]),
     ("meta", &["version", "skill", "help"]),
 ];
 
@@ -92,6 +92,7 @@ const VERB_LINES: &[(&str, &str, &str)] = &[
     ("revert", "revert <seq>", "append an inverse change"),
     ("doctor", "doctor [--repair|--rebuild]", "crate health, recovery"),
     ("check", "check [--fast|--strict]", "the compiler's report, no refusal"),
+    ("test", "test [--target <id>|--all]", "execute tests, report execution"),
     ("version", "version", "the package version"),
     ("skill", "skill", "this page"),
     ("help", "help [<verb>] | --help", "this page"),
@@ -113,7 +114,7 @@ const FLAG_LINES: &[(&str, &str)] = &[
     ("--lib", "new: a library crate"),
     ("--policy", "new: write el.policy"),
     ("--force", "init: adopt anyway (not built)"),
-    ("--cascade", "rm: remove dangling references too"),
+    ("--cascade", "rm: remove dangling references too (not built)"),
     ("--attic", "log: include truncated future"),
     ("--repair", "doctor: roll back an interruption"),
     ("--rebuild", "doctor: regenerate from the journal"),
@@ -142,6 +143,8 @@ const FLAG_LINES: &[(&str, &str)] = &[
     ("--module <m>", "ls: narrow to one module"),
     ("--kind <k>", "ls: narrow to one kind"),
     ("--rename <name>", "edit: a whole-identifier rename"),
+    ("--target <id>", "test: run one test element"),
+    ("--all", "test: run the whole suite"),
     ("-n <count>", "log: how many entries"),
     ("--help", "this page"),
 ];

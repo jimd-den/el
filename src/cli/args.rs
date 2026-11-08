@@ -13,7 +13,7 @@ use std::fmt;
 pub const VALUE_FLAGS: &[&str] = &[
     "--in", "--after", "--before", "--at", "--vis", "--sig", "--body", "--doc", "--attr",
     "--preamble", "--root", "--edition", "--body-mode", "--limit", "--module", "--kind",
-    "--rename", "-n", "--takes", "--returns", "--type", "--value",
+    "--rename", "-n", "--takes", "--returns", "--type", "--value", "--target",
 ];
 
 /// Flags that stand alone. Anything not here and not in `VALUE_FLAGS` is refused,
@@ -22,7 +22,7 @@ pub const BOOL_FLAGS: &[&str] = &[
     "--json", "--quiet", "--dry-run", "--yes", "--no-color", "--fast", "--strict",
     "--semantic", "--verbose", "--lib", "--policy", "--force", "--cascade", "--attic",
     "--repair", "--rebuild", "--statements", "--source", "--history", "--terse",
-    "--opaque", "--help",
+    "--opaque", "--help", "--all",
 ];
 
 /// A command line `el` refuses to understand.

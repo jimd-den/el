@@ -90,7 +90,7 @@ el add stmt <owner> (--after <id>|--before <id>|--at <n>) --body <file|->
 
 el edit <id> [--rename <name>] [--sig <text>] [--body <file|->] [--doc <text>]
              [--vis <v>] [--attr <text>]... [--body-mode split|opaque] [--json]
-el rm <id>... [--cascade] [--json]
+el rm <id>... [--cascade] [--json]   # --cascade is not built; rm refuses it
 el mv <id> <module> [--after <id>] [--json]
 el mv <stmt> --after <stmt>            # reorder inside one body (FR-66)
 el apply [<file>|-] [--dry-run] [--json]
@@ -124,7 +124,8 @@ module it just created.
 anchor; `mv <stmt> --after <stmt>` reorders inside one body and refuses a cross-body
 anchor. `add` prints the new id on stdout (`FR-6`). `edit` prints the ids it changed. `rm` prints
 the ids it removed **and every remaining reference** (`FR-9`); dangling references are an
-L0 violation unless `--cascade`, which removes them in the same transaction.
+L0 violation. `--cascade` would remove them in the same transaction, but it is not
+built: `rm --cascade` is refused until it is.
 
 `--rename` rewrites the catalog's own references: whole identifiers only, in statement
 text and element heads, with strings, comments, char literals and lifetimes untouched. It is
@@ -194,7 +195,7 @@ the "which ids answer to this name" question until `refs` lands.
 
 ```text
 el check [--strict|--semantic|--fast] [--json]
-el test  [-- <cargo test args>] [--json]
+el test  [--target <id>|--all] [--json]
 el build [--release] [--json]
 el run   [-- <program args>] [--json]
 el fix   <id> (--list | --apply <code>:<n>) [--json]
@@ -207,10 +208,17 @@ un-attributed and the page says so; with a catalog the same span map the gate us
 them. `gate.new` and `gate.fixed` are 0 because there is no baseline comparison yet; the set is
 in `gate.diagnostics` and counted in `gate.existing`. Baseline writing after `check` is
 deferred.
-`build` and `fix` are specified but unbuilt: the CLI has no such verbs yet. `test` exists
-as a kind (see §4.2); only the `el test` verb is still unbuilt. The loop's red and green
-steps are `cargo test`, not `el check`: the gate runs `cargo check`, which does not run
-tests, so a failing test commits. `run` does
+`build` and `fix` are specified but unbuilt: the CLI has no such verbs yet. `test` is
+built: it executes the crate's tests and reports execution, not compilation (ADR-0034).
+`--target <id>` runs one test element by id, filtered by its bare name; `--all`, or no
+flag, runs the suite. A failing test exits 3 with code `test.failed` — the verification
+bucket check already uses — with a distinct code so a script can tell it from a gate
+rejection; a suite that does not compile exits 3 with code `test.compile_failed` and
+next `el check`, so a compile error never masquerades as behavior evidence. Missing
+cargo is `EL_ENV_UNAVAILABLE`, never a test verdict. `test` is on-demand evidence,
+not a gate tier: it never refuses a commit and never changes what the gate checks.
+The loop's red and green steps are `cargo test`, not `el check`: the gate runs
+`cargo check`, which does not run tests, so a failing test commits. `run` does
 **not** gate first — after drift refusal, disk equals the head projection, so a gate would
 judge an empty delta; ambient files outside the projection (such as `build.rs`) are surfaced
 by `cargo run` itself.

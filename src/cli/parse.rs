@@ -15,7 +15,7 @@ use super::request::{Command, Globals, Mv, Parsed};
 pub const VERBS: &[&str] = &[
     "new", "init", "add", "batch", "edit", "rm", "mv", "run", "log", "version", "ls", "tree",
     "show", "find", "explain", "diff", "undo", "redo", "revert", "doctor", "skill", "help",
-    "apply", "check",
+    "apply", "check", "test",
 ];
 
 /// Parse a whole command line.
@@ -51,6 +51,10 @@ pub fn parse(argv: &[String]) -> Result<Parsed, Usage> {
         },
         "skill" => Command::Skill,
         "check" => Command::Check,
+        "test" => Command::Test {
+            target: args.value("--target")?,
+            all: args.has("--all"),
+        },
         "explain" => Command::Explain {
             id: args.required("explain")?,
         },
@@ -129,7 +133,7 @@ fn check_subject(args: &Args, command: &Command) -> Result<(), Usage> {
         Command::Edit(_) | Command::Show(_) | Command::Find(_) | Command::Explain { .. }
         | Command::Apply { .. } => 2,
         Command::Ls(_) | Command::Tree(_) | Command::Version | Command::Init { .. }
-        | Command::Skill | Command::Check => 1,
+        | Command::Skill | Command::Check | Command::Test { .. } => 1,
         Command::Help { .. } => usize::MAX,
         Command::Diff { .. } => 3,
         Command::Undo { .. } | Command::Revert { .. } => 2,
